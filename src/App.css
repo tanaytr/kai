@@ -1,0 +1,404 @@
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=JetBrains+Mono:wght@400;500;700;800&family=Orbitron:wght@700;900&display=swap');
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+:root {
+  --nv-green: #76b900;
+  --cyan: #00d4ff;
+  --pink: #ff006e;
+  --purple: #8338ec;
+  --yellow: #ffbe0b;
+  --blue: #3a86ff;
+  --teal: #06ffa5;
+  --bg-dark: #0f0f23;
+  --bg-deep: #0F0F23;
+  --bg-mid: #1a0b2e;
+  --bg-darkest: #16003b;
+  --green: #06FFA5;
+  --grid-color: rgba(131, 56, 236, 0.15);
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  /* KEY FIX: allow body to scroll naturally on mobile */
+  overflow-x: hidden;
+  overflow-y: auto;
+  background: linear-gradient(135deg, #0f0f23 0%, #1a0b2e 50%, #16003b 100%);
+  font-family: 'JetBrains Mono', monospace;
+  color: #e0e0f0;
+  user-select: none;
+  image-rendering: pixelated;
+  -webkit-overflow-scrolling: touch;
+}
+
+#root {
+  width: 100%;
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.app-container {
+  width: 100%;
+  min-height: 100vh;
+  position: relative;
+  /* overflow controlled per-screen by App.tsx */
+}
+
+/* ─── SCROLLING GRID BACKGROUND ─────────────────────────────────────────── */
+.arcade-grid {
+  position: fixed;
+  inset: 0;
+  background-image:
+    linear-gradient(var(--grid-color) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-color) 1px, transparent 1px);
+  background-size: 40px 40px;
+  pointer-events: none;
+  z-index: 1;
+  animation: gridScroll 20s linear infinite;
+}
+
+@keyframes gridScroll {
+  0%   { transform: translateY(0); }
+  100% { transform: translateY(40px); }
+}
+
+/* ─── CRT SCANLINES ──────────────────────────────────────────────────────── */
+.crt-overlay {
+  position: fixed;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0, 0, 0, 0.06) 2px,
+    rgba(0, 0, 0, 0.06) 4px
+  );
+  pointer-events: none;
+  z-index: 2;
+  animation: flicker 0.15s infinite;
+}
+
+@keyframes flicker {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.97; }
+}
+
+/* ─── MOVING SCANLINE BAR ────────────────────────────────────────────────── */
+.scanline {
+  position: fixed;
+  top: -10%;
+  left: 0;
+  width: 100%;
+  height: 8%;
+  background: linear-gradient(
+    to bottom,
+    transparent,
+    rgba(131, 56, 236, 0.04),
+    transparent
+  );
+  pointer-events: none;
+  z-index: 3;
+  animation: scanline 8s linear infinite;
+}
+
+@keyframes scanline {
+  0%   { transform: translateY(-10%); }
+  100% { transform: translateY(110vh); }
+}
+
+/* ─── TELEMETRY SIDE BAR ─────────────────────────────────────────────────── */
+.telemetry-bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 4px;
+  height: 100%;
+  background: linear-gradient(180deg, transparent, var(--pink), transparent);
+  animation: telemetryV 3s infinite linear;
+  z-index: 100;
+  pointer-events: none;
+}
+
+@keyframes telemetryV {
+  0%   { transform: translateY(-100%); }
+  100% { transform: translateY(100%); }
+}
+
+/* ─── PIXEL BUTTON ───────────────────────────────────────────────────────── */
+.pixel-btn {
+  font-family: 'Press Start 2P', cursive;
+  border: none;
+  cursor: pointer;
+  transition: all 0.1s;
+  position: relative;
+  text-transform: uppercase;
+  image-rendering: pixelated;
+}
+
+.pixel-btn:hover  { transform: translateY(-4px); }
+.pixel-btn:active { transform: translateY(2px);  }
+
+.pixel-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+/* ─── PANEL GLOW BORDERS ─────────────────────────────────────────────────── */
+.panel-pink {
+  border: 4px solid var(--pink);
+  box-shadow: 0 0 20px rgba(255,0,110,0.3), inset 0 0 10px rgba(255,0,110,0.05);
+}
+.panel-green {
+  border: 4px solid var(--teal);
+  box-shadow: 0 0 20px rgba(6,255,165,0.3), inset 0 0 10px rgba(6,255,165,0.05);
+}
+.panel-blue {
+  border: 4px solid var(--blue);
+  box-shadow: 0 0 20px rgba(58,134,255,0.3), inset 0 0 10px rgba(58,134,255,0.05);
+}
+.panel-purple {
+  border: 4px solid var(--purple);
+  box-shadow: 0 0 20px rgba(131,56,236,0.3), inset 0 0 10px rgba(131,56,236,0.05);
+}
+.panel-yellow {
+  border: 4px solid var(--yellow);
+  box-shadow: 0 0 20px rgba(255,190,11,0.3), inset 0 0 10px rgba(255,190,11,0.05);
+}
+
+/* ─── TEXT GLOW HELPERS ──────────────────────────────────────────────────── */
+.glow-pink   { text-shadow: 0 0 10px var(--pink),   0 0 20px var(--pink);   }
+.glow-green  { text-shadow: 0 0 10px var(--teal),   0 0 20px var(--teal);   }
+.glow-blue   { text-shadow: 0 0 10px var(--blue),   0 0 20px var(--blue);   }
+.glow-purple { text-shadow: 0 0 10px var(--purple),  0 0 20px var(--purple); }
+.glow-yellow { text-shadow: 0 0 10px var(--yellow),  0 0 20px var(--yellow); }
+
+/* ─── GLOBAL FLOATING CONTROLS ───────────────────────────────────────────── */
+.global-controls {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 400;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: center;
+}
+
+.control-btn {
+  width: 44px;
+  height: 44px;
+  background: rgba(0, 0, 0, 0.85);
+  border: 2px solid;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 1.2rem;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.control-btn:hover { transform: scale(1.1); }
+
+/* ─── TETRIS BLOCK ───────────────────────────────────────────────────────── */
+.tetris-block {
+  box-shadow:
+    inset -3px -3px 0 rgba(0, 0, 0, 0.5),
+    inset  3px  3px 0 rgba(255, 255, 255, 0.2);
+}
+
+/* ─── MATH / CODE BLOCK ──────────────────────────────────────────────────── */
+.math-block {
+  background: rgba(0, 0, 0, 0.7);
+  border: 2px solid var(--teal);
+  box-shadow: 0 0 15px rgba(6,255,165,0.2), inset 0 0 15px rgba(6,255,165,0.05);
+  padding: 20px;
+  border-radius: 4px;
+  color: var(--teal);
+  font-family: 'JetBrains Mono', monospace;
+  text-align: center;
+}
+
+/* ─── DATA TAG ───────────────────────────────────────────────────────────── */
+.data-tag {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.65rem;
+  color: var(--teal);
+  border: 1px solid var(--teal);
+  padding: 2px 5px;
+  margin-right: 4px;
+}
+
+/* ─── PIXEL CORNER DECORATIONS ───────────────────────────────────────────── */
+.pixel-corner {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  background: var(--purple);
+}
+.pixel-corner-tl { top: 0;    left: 0;  }
+.pixel-corner-tr { top: 0;    right: 0; }
+.pixel-corner-bl { bottom: 0; left: 0;  }
+.pixel-corner-br { bottom: 0; right: 0; }
+
+/* ─── GHOST ICON ─────────────────────────────────────────────────────────── */
+.ghost-icon {
+  position: absolute;
+  font-size: 12rem;
+  color: rgba(131, 56, 236, 0.04);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ─── SHLOK BOX ──────────────────────────────────────────────────────────── */
+.shlok-box {
+  border: 4px solid var(--yellow);
+  padding: 40px;
+  border-radius: 8px;
+  position: relative;
+  background: rgba(255, 190, 11, 0.04);
+  box-shadow: 0 0 30px rgba(255, 190, 11, 0.2);
+}
+
+/* ─── SLIDE TRANSITIONS ──────────────────────────────────────────────────── */
+.slide-enter {
+  opacity: 0;
+  transform: scale(1.05) translateX(20px);
+}
+.slide-enter-active {
+  opacity: 1;
+  transform: scale(1) translateX(0);
+  transition: all 0.5s ease;
+}
+.slide-exit {
+  opacity: 1;
+  transform: scale(1);
+}
+.slide-exit-active {
+  opacity: 0;
+  transform: scale(0.95) translateX(-20px);
+  transition: all 0.5s ease;
+}
+
+/* ─── ANIMATIONS ─────────────────────────────────────────────────────────── */
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0; }
+}
+
+.blink {
+  animation: blink 1s step-end infinite;
+}
+
+@keyframes blink-cursor {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0; }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0) rotate(0deg);   }
+  50%       { transform: translateY(-20px) rotate(10deg); }
+}
+
+@keyframes glitch {
+  0%,  100% { transform: translate(0);       clip-path: none; }
+  20%        { transform: translate(-2px, 1px); }
+  40%        { transform: translate(2px, -1px);  clip-path: polygon(0 30%, 100% 30%, 100% 50%, 0 50%); }
+  60%        { transform: translate(-1px, 2px); }
+  80%        { transform: translate(1px, -2px);  clip-path: polygon(0 60%, 100% 60%, 100% 80%, 0 80%); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0);    }
+}
+
+@keyframes slideInRight {
+  from { transform: translateX(100%); }
+  to   { transform: translateX(0);    }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; transform: scale(1);    }
+  50%       { opacity: 0.8; transform: scale(1.05); }
+}
+
+@keyframes glow {
+  from { box-shadow: 0 0 10px rgba(131, 56, 236, 0.5); }
+  to   { box-shadow: 0 0 20px rgba(131, 56, 236, 1), 0 0 30px rgba(131, 56, 236, 0.5); }
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.animate-float  { animation: float  3s ease-in-out infinite; }
+.animate-glitch { animation: glitch 2.5s infinite;           }
+.fade-in        { animation: fadeIn 0.4s ease;               }
+.slide-in-right { animation: slideInRight 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+.pulse          { animation: pulse 2s ease-in-out infinite;  }
+.glow           { animation: glow  2s ease-in-out infinite alternate; }
+
+/* ─── SPINNER ─────────────────────────────────────────────────────────────── */
+.spinner {
+  border: 3px solid rgba(131, 56, 236, 0.3);
+  border-top-color: var(--purple);
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  animation: spin 1s linear infinite;
+}
+
+/* ─── TOOLTIP ─────────────────────────────────────────────────────────────── */
+.tooltip {
+  position: absolute;
+  background: rgba(0, 0, 0, 0.95);
+  border: 2px solid var(--cyan);
+  padding: 8px 12px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  color: var(--cyan);
+  pointer-events: none;
+  white-space: nowrap;
+  z-index: 1000;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.tooltip.show { opacity: 1; }
+
+/* ─── SCROLLBAR ───────────────────────────────────────────────────────────── */
+::-webkit-scrollbar       { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: rgba(0, 0, 0, 0.3); }
+::-webkit-scrollbar-thumb { background: var(--purple); border: 1px solid rgba(131, 56, 236, 0.5); }
+::-webkit-scrollbar-thumb:hover { background: var(--cyan); }
+
+/* ─── RECHARTS OVERRIDES ──────────────────────────────────────────────────── */
+.recharts-cartesian-grid-horizontal line,
+.recharts-cartesian-grid-vertical line {
+  stroke: rgba(131, 56, 236, 0.2) !important;
+}
+
+/* ─── RESPONSIVE ──────────────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .pixel-btn  { font-size: 0.5rem; }
+  .control-btn { width: 36px; height: 36px; }
+}
+
+/* ─── MOBILE LANDSCAPE SCROLL FIX ─────────────────────────────────────────── */
+@media (max-width: 900px) {
+  html, body {
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .app-container {
+    min-height: 100vh;
+    height: auto;
+  }
+}

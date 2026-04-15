@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/png" href="/img.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>NVIDIA GH200 Explorer</title>
+    <style>
+      body, html {
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
+        background: #000;
+      }
+      #orientation-warning {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: #000;
+        color: #fff;
+        font-family: 'Arial', sans-serif;
+        font-size: 1.5rem;
+        text-align: center;
+        justify-content: center;
+        align-items: center;
+        flex-direction: column;
+        z-index: 10000;
+        padding: 20px;
+      }
+      #orientation-warning svg {
+        width: 100px;
+        height: 100px;
+        margin-bottom: 20px;
+        animation: rotate 2s linear infinite;
+      }
+      @keyframes rotate {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(90deg); }
+      }
+      @media (orientation: portrait) and (max-width: 768px) {
+        #orientation-warning {
+          display: flex !important;
+        }
+        #root {
+          display: none !important;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="orientation-warning">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <rect x="4" y="2" width="16" height="20" rx="2" />
+        <path d="M12 18h.01" />
+      </svg>
+      <div>Please rotate your device</div>
+      <div style="font-size: 1rem; opacity: 0.7; margin-top: 10px;">This experience is optimized for landscape mode</div>
+    </div>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
