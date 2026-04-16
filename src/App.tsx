@@ -1,22 +1,13 @@
 import { useState, useCallback } from 'react';
 import { Volume2, VolumeX } from 'lucide-react';
 import HomeScreen from './components/HomeScreen';
-import SlidesEngine from './engines/SlidesEngine';
-import ChipViewer from './engines/ChipViewer';
-import PipelineAnimator from './engines/PipelineAnimator';
-import BenchmarkArena from './engines/BenchmarkArena';
-import MemoryExplorer from './engines/MemoryExplorer';
-import DataRoutingGame from './engines/DataRoutingGame';
-import ArchitectureVisualizer from './engines/ArchitectureVisualizer';
-import CacheExplorer from './engines/CacheExplorer';
-import ISADecoder from './engines/ISADecoder';
-import PaperModal from './engines/PaperModal';
+import PresentationEngine from './engines/PresentationEngine';
+import CircuitEngine from './engines/CircuitEngine';
+import ExploreEngine from './engines/ExploreEngine';
 import MusicPanel from './components/MusicPanel';
-import ChipAssembler from './engines/ChipAssembler';
-import AssemblyCompiler from './engines/AssemblyCompiler';
 import { musicEngine, type MusicTheme, THEME_META } from './utils/musicEngine';
 
-type Screen = 'home' | 'slides' | 'chip' | 'pipeline' | 'benchmark' | 'memory' | 'game' | 'arch' | 'cache' | 'isa' | 'paper' | 'assembler' | 'asmcompiler';
+type Screen = 'home' | 'presentation' | 'circuit' | 'explore';
 
 export default function App() {
   const [screen, setScreen]               = useState<Screen>('home');
@@ -60,19 +51,15 @@ export default function App() {
     setScreen('home');
   }, []);
 
-  const accent       = THEME_META[currentTheme]?.color ?? '#06FFA5';
-  const screenProps  = { onBack: goHome };
-  const isHome       = screen === 'home';
+  const accent      = THEME_META[currentTheme]?.color ?? '#06FFA5';
+  const screenProps = { onBack: goHome };
+  const isHome      = screen === 'home';
 
   return (
     <div
       onClick={bootstrapAudio}
       className="app-container"
-      style={{
-        // On non-home screens keep overflow hidden (3D canvas etc)
-        // On home screen allow natural scroll
-        overflow: isHome ? 'auto' : 'hidden',
-      }}
+      style={{ overflow: isHome ? 'auto' : 'hidden' }}
     >
       {/* CSS effect layers */}
       <div className="arcade-grid" />
@@ -83,25 +70,15 @@ export default function App() {
       {/* Screen content */}
       <div style={{
         width: '100%',
-        // Home screen: height auto to allow scrolling; others: full height
         height: isHome ? 'auto' : '100%',
         minHeight: '100%',
         position: 'relative',
         zIndex: 10,
       }}>
-        {screen === 'home'      && <HomeScreen onNavigate={navigate} />}
-        {screen === 'slides'    && <SlidesEngine {...screenProps} />}
-        {screen === 'chip'      && <ChipViewer {...screenProps} />}
-        {screen === 'assembler' && <ChipAssembler {...screenProps} />}
-        {screen === 'pipeline'  && <PipelineAnimator {...screenProps} />}
-        {screen === 'benchmark' && <BenchmarkArena {...screenProps} />}
-        {screen === 'memory'    && <MemoryExplorer {...screenProps} />}
-        {screen === 'game'      && <DataRoutingGame {...screenProps} />}
-        {screen === 'arch'      && <ArchitectureVisualizer {...screenProps} />}
-        {screen === 'cache'     && <CacheExplorer {...screenProps} />}
-        {screen === 'isa'       && <ISADecoder {...screenProps} />}
-        {screen === 'asmcompiler' && <AssemblyCompiler {...screenProps} />}
-        {screen === 'paper'     && <PaperModal {...screenProps} />}
+        {screen === 'home'         && <HomeScreen onNavigate={navigate} />}
+        {screen === 'presentation' && <PresentationEngine {...screenProps} />}
+        {screen === 'circuit'      && <CircuitEngine {...screenProps} />}
+        {screen === 'explore'      && <ExploreEngine {...screenProps} />}
       </div>
 
       {/* Global floating controls */}
