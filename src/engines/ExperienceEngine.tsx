@@ -271,19 +271,6 @@ export default function ExperienceEngine({ onBack }: ExperienceEngineProps) {
             ))}
           </div>
         </div>
-            {[
-              { p: 'G12', active: isSummoned, label: 'MOT_L' },
-              { p: 'G13', active: isSummoned, label: 'MOT_R' },
-              { p: 'G25', active: phase === 'ALERT', label: 'BUZZ' },
-              { p: 'G04', active: phase !== 'IDLE', label: 'SERVO' },
-              { p: 'G18', active: true, label: 'ECHO' }
-            ].map((p, i) => (
-              <div key={i} style={{ border: `1px solid ${p.active ? COLORS.accent : 'rgba(255,255,255,0.1)'}`, padding: '4px 6px', borderRadius: 2, fontSize: '0.38rem', color: p.active ? COLORS.accent : 'rgba(255,255,255,0.3)', background: p.active ? `${COLORS.accent}11` : 'none' }}>
-                {p.label}
-              </div>
-            ))}
-          </div>
-        </div>
 
         {/* Log Window */}
         <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
