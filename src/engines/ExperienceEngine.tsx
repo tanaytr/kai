@@ -275,7 +275,7 @@ export default function ExperienceEngine({ onBack }: ExperienceEngineProps) {
           <div style={{ fontSize: '0.5rem', color: 'rgba(255,255,255,0.6)', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
             <Cpu size={12} /> GPIO STATUS (LIVE)
           </div>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap' as any, gap: 6 }}>
             {[
               { p: 'G12', active: isSummoned, label: 'MOT_L' },
               { p: 'G13', active: isSummoned, label: 'MOT_R' },
