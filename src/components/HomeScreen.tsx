@@ -225,36 +225,55 @@ export default function HomeScreen({ onNavigate }: HomeScreenProps) {
           </div>
 
           {/* Credits */}
+          <div style={{ marginTop: 10, paddingBottom: 40 }}>
+            <div style={{ fontFamily: "'Press Start 2P', cursive", fontSize: 'clamp(0.4rem, 0.7vw, 0.5rem)', color: '#8338EC', textShadow: '0 0 10px #8338EC88', letterSpacing: '2px', marginBottom: 15 }}>
+              EXPERIENCE HANDCRAFTED BY
+            </div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '15px 40px' }}>
+              {['SRISHTI JAIN (F149)', 'DIKSHA RATHI (F118)', 'TANAY TRIVEDI (F061)'].map((name, i) => (
+                <div key={i} style={{ 
+                  fontFamily: "'Press Start 2P', cursive", 
+                  fontSize: 'clamp(0.45rem, 0.9vw, 0.65rem)', 
+                  color: '#00d4ff', 
+                  textShadow: '0 0 15px #00d4ffaa', 
+                  letterSpacing: '2px',
+                  background: 'rgba(0,0,0,0.3)',
+                  padding: '8px 16px',
+                  border: '1px solid rgba(0,212,255,0.2)',
+                  borderRadius: '4px'
+                }}>{name}</div>
+              ))}
             </div>
           </div>
 
-          <button onClick={() => { setShowHelp(true); musicEngine.playSfx(600); }} style={{ position: 'fixed', bottom: 20, left: 20, background: 'rgba(0,0,0,0.8)', border: '2px solid #FFBE0B', color: '#FFBE0B', width: 44, height: 44, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', zIndex: 100, boxShadow: '0 0 15px rgba(255,190,11,0.3)' }}>
-            <HelpCircle size={20} />
-          </button>
-
-          {showHelp && (
-            <div style={{ position:'fixed', inset:0, zIndex:1000, background:'rgba(5,5,15,0.92)', backdropFilter:'blur(10px)', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', padding:40 }}>
-              <div style={{ maxWidth:600, width:'100%', background:'rgba(0,0,0,0.85)', border:'3px solid #FFBE0B', padding:30, position:'relative', boxShadow:'0 0 50px rgba(255,190,11,0.2)' }}>
-                <button onClick={()=>setShowHelp(false)} style={{ position:'absolute', top:15, right:15, background:'none', border:'none', color:'#FFBE0B', cursor:'pointer' }}><X size={20}/></button>
-                <div style={{ fontFamily:"'Press Start 2P',cursive", color:'#FFBE0B', fontSize:'0.8rem', marginBottom:20, textAlign:'center' }}>KAI EXPLORER HELP</div>
-                <div style={{ display:'flex', flexDirection:'column', gap:20 }}>
-                  {[
-                    { title: 'REPORT MODE', text: 'Step-by-step technical presentation covering dual-core implementation, sensor specs, and project results.' },
-                    { title: 'CIRCUIT MODE', text: 'Interactive pin diagram of the ESP32-S3 and all peripherals. Click blocks to see GPIO mapping.' },
-                    { title: 'EXPLORE MODE', text: '3D structural breakdown of the KAI robot. Explode the model to see individual components.' }
-                  ].map((item, i) => (
-                    <div key={i} style={{ borderLeft: '4px solid #FFBE0B', paddingLeft: 15 }}>
-                      <div style={{ fontFamily:"'Press Start 2P',cursive", color:'#FFBE0B', fontSize:'0.5rem', marginBottom:8 }}>{item.title}</div>
-                      <div style={{ fontFamily:"'JetBrains Mono',monospace", color:'#ddd', fontSize:'0.75rem', lineHeight:1.6 }}>{item.text}</div>
-                    </div>
-                  ))}
-                </div>
-                <button onClick={()=>setShowHelp(false)} style={{ marginTop:30, width:'100%', fontFamily:"'Press Start 2P',cursive", background:'#FFBE0B', border:'none', color:'#000', padding:10, fontSize:'0.5rem', cursor:'pointer' }}>START EXPLORING</button>
-              </div>
-            </div>
-          )}
         </div>
       </div>
+
+      <button onClick={() => { setShowHelp(true); musicEngine.playSfx(600); }} style={{ position: 'fixed', bottom: 20, left: 20, background: 'rgba(0,0,0,0.8)', border: '2px solid #FFBE0B', color: '#FFBE0B', width: 44, height: 44, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', zIndex: 100, boxShadow: '0 0 15px rgba(255,190,11,0.3)' }}>
+        <HelpCircle size={20} />
+      </button>
+
+      {showHelp && (
+        <div style={{ position:'fixed', inset:0, zIndex:1000, background:'rgba(5,5,15,0.92)', backdropFilter:'blur(10px)', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', padding:40 }}>
+          <div style={{ maxWidth:600, width:'100%', background:'rgba(0,0,0,0.85)', border:'3px solid #FFBE0B', padding:30, position:'relative', boxShadow:'0 0 50px rgba(255,190,11,0.2)' }}>
+            <button onClick={()=>setShowHelp(false)} style={{ position:'absolute', top:15, right:15, background:'none', border:'none', color:'#FFBE0B', cursor:'pointer' }}><X size={20}/></button>
+            <div style={{ fontFamily:"'Press Start 2P',cursive", color:'#FFBE0B', fontSize:'0.8rem', marginBottom:20, textAlign:'center' }}>KAI EXPLORER HELP</div>
+            <div style={{ display:'flex', flexDirection:'column', gap:20 }}>
+              {[
+                { title: 'REPORT MODE', text: 'Step-by-step technical presentation covering dual-core implementation, sensor specs, and project results.' },
+                { title: 'CIRCUIT MODE', text: 'Interactive pin diagram of the ESP32-S3 and all peripherals. Click blocks to see GPIO mapping.' },
+                { title: 'EXPLORE MODE', text: '3D structural breakdown of the KAI robot. Explode the model to see individual components.' }
+              ].map((item, i) => (
+                <div key={i} style={{ borderLeft: '4px solid #FFBE0B', paddingLeft: 15 }}>
+                  <div style={{ fontFamily:"'Press Start 2P',cursive", color:'#FFBE0B', fontSize:'0.5rem', marginBottom:8 }}>{item.title}</div>
+                  <div style={{ fontFamily:"'JetBrains Mono',monospace", color:'#ddd', fontSize:'0.75rem', lineHeight:1.6 }}>{item.text}</div>
+                </div>
+              ))}
+            </div>
+            <button onClick={()=>setShowHelp(false)} style={{ marginTop:30, width:'100%', fontFamily:"'Press Start 2P',cursive", background:'#FFBE0B', border:'none', color:'#000', padding:10, fontSize:'0.5rem', cursor:'pointer' }}>START EXPLORING</button>
+          </div>
+        </div>
+      )}
 
       <style>{`
         @keyframes float  { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
