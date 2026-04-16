@@ -68,10 +68,20 @@ export default function ExperienceEngine({ onBack }: ExperienceEngineProps) {
 
     const ambient = new THREE.AmbientLight(0xffffff, 0.4);
     scene.add(ambient);
-    const spotlight = new THREE.SpotLight(0xffffff, 15);
+    
+    // Hemisphere light for better overall visibility
+    const hemi = new THREE.HemisphereLight(0xffffff, 0x444444, 0.8);
+    scene.add(hemi);
+
+    const spotlight = new THREE.SpotLight(0xffffff, 20);
     spotlight.position.set(2, 5, 2);
     spotlight.castShadow = true;
     scene.add(spotlight);
+
+    // KAI-specific point light to ensure visibility
+    const point = new THREE.PointLight(COLORS.accent, 2, 8);
+    point.position.set(0, 1, 1);
+    scene.add(point);
 
     // Floor Grid
     const grid = new THREE.GridHelper(20, 40, 0x06FFA5, 0x002233);
@@ -89,15 +99,14 @@ export default function ExperienceEngine({ onBack }: ExperienceEngineProps) {
     sceneRef.current.add(root);
 
     // Chassis (Body)
-    const chassisMat = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.2, metalness: 0.8 });
+    const chassisMat = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.05, metalness: 1.0 });
     const body = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.4, 0.6), chassisMat);
     body.position.y = 0;
     root.add(body);
 
-    // Wheels (N20 Geared Units)
-    const wheelGeom = new THREE.CylinderGeometry(0.2, 0.2, 0.08, 24);
+    const wheelGeom = new THREE.CylinderGeometry(0.2, 0.2, 0.12, 32);
     wheelGeom.rotateZ(Math.PI / 2);
-    const wheelMat = new THREE.MeshStandardMaterial({ color: 0x333333, roughness: 0.1 });
+    const wheelMat = new THREE.MeshStandardMaterial({ color: 0x222222, roughness: 0.2, metalness: 0.5 });
     
     [-0.45, 0.45].forEach(x => {
       const w = new THREE.Mesh(wheelGeom, wheelMat);
@@ -106,7 +115,6 @@ export default function ExperienceEngine({ onBack }: ExperienceEngineProps) {
       wheels.current.push(w);
     });
 
-    // Head (Sphere)
     const head = new THREE.Group();
     headGroup.current = head;
     head.position.y = 0.45;
@@ -115,50 +123,56 @@ export default function ExperienceEngine({ onBack }: ExperienceEngineProps) {
     const headSphere = new THREE.Mesh(new THREE.SphereGeometry(0.35, 32, 24), chassisMat);
     head.add(headSphere);
 
-    // Face Screen (Round)
-    const faceGeom = new THREE.CircleGeometry(0.26, 32);
+    const faceGeom = new THREE.CircleGeometry(0.28, 32);
     const faceMat = new THREE.MeshStandardMaterial({ 
       color: 0x000000, 
       emissive: new THREE.Color(COLORS.accent), 
-      emissiveIntensity: 0.5,
+      emissiveIntensity: 0.8,
       transparent: true,
       opacity: 0.95
     });
     const facePlane = new THREE.Mesh(faceGeom, faceMat);
-    facePlane.position.set(0, 0.05, 0.28);
+    facePlane.position.set(0, 0, 0.28);
     faceMesh.current = facePlane;
     head.add(facePlane);
 
-    // Visor / Sonar (HC-SR04)
-    const visor = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.08, 0.1), new THREE.MeshStandardMaterial({ color: 0x555555 }));
+    const visor = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.1, 0.15), new THREE.MeshStandardMaterial({ color: 0x444444, metalness: 0.8 }));
     visor.position.set(0, -0.1, 0.3);
     head.add(visor);
   };
+
+  const currentZ = useRef(0);
+  const targetZ  = useRef(0);
 
   const animate = () => {
     if (!mountedRef.current) return;
     const THREE = (window as any).THREE;
     const t = performance.now() * 0.001;
 
-    // Phase transitions & visuals
     if (rootGroup.current && headGroup.current) {
-      // 1. Handle Locomotion (Wheels)
-      if (isSummoned) {
-        rootGroup.current.position.z = Math.max(0, rootGroup.current.position.z - 0.03);
-        wheels.current.forEach(w => w.rotation.x -= 0.15);
-        if (rootGroup.current.position.z === 0) {
-          setIsSummoned(false);
-          addLog("SUMMON COMPLETE - DESTINATION REACHED");
-        }
+      // 1. Handle Locomotion (Smooth Rolling)
+      const prevZ = currentZ.current;
+      currentZ.current += (targetZ.current - currentZ.current) * 0.04; // Slightly slower, smoother lerp
+      rootGroup.current.position.z = currentZ.current;
+
+      const deltaZ = currentZ.current - prevZ;
+      const wheelRadius = 0.2;
+      wheels.current.forEach(w => {
+        w.rotation.x -= deltaZ / wheelRadius;
+      });
+
+      if (isSummoned && Math.abs(currentZ.current - targetZ.current) < 0.01) {
+        setIsSummoned(false);
+        addLog("SUMMON COMPLETE - DOCKED AT USER");
       }
 
-      // 2. Handle Head Tilt (Servo)
-      const targetTilt = phase === 'DROWSY' ? 0.4 : (phase === 'ENGAGED' ? -0.2 : 0);
-      headGroup.current.rotation.x += (targetTilt - headGroup.current.rotation.x) * 0.1;
+      // 2. Handle Head Tilt
+      const targetTilt = phase === 'DROWSY' ? 0.6 : (phase === 'ENGAGED' ? -0.2 : 0);
+      headGroup.current.rotation.x += (targetTilt - headGroup.current.rotation.x) * 0.08;
 
       // 3. Handle Face Expressions
       if (faceMesh.current) {
-        const pulse = Math.abs(Math.sin(t * 4)) * 0.2;
+        const pulse = Math.abs(Math.sin(t * 3)) * 0.3;
         faceMesh.current.material.emissiveIntensity = 0.5 + pulse;
         if (phase === 'ALERT') faceMesh.current.material.emissive.set(COLORS.alert);
         else if (phase === 'DROWSY') faceMesh.current.material.emissive.set(COLORS.info);
@@ -173,7 +187,6 @@ export default function ExperienceEngine({ onBack }: ExperienceEngineProps) {
   // ── Simulation Logic ───────────────────────────────────────────────────────
 
   useEffect(() => {
-    // Behavior State Machine Simulation
     let nextPhase: KAIState = 'IDLE';
     if (simValues.gas > 2500) nextPhase = 'ALERT';
     else if (simValues.distance < 40) nextPhase = 'ENGAGED';
@@ -190,8 +203,9 @@ export default function ExperienceEngine({ onBack }: ExperienceEngineProps) {
 
   const triggerSummon = () => {
     if (isSummoned) return;
-    addLog("SUMMON SIGNAL SENT → N20 PWM HIGH");
-    rootGroup.current.position.z = 2.5; 
+    addLog("SUMMON SIGNAL SENT → N20 PWM CONTROL");
+    currentZ.current = 2.5; 
+    targetZ.current = 0;
     setSimValues(v => ({ ...v, distance: 30 }));
     setIsSummoned(true);
     musicEngine.playSfx(200);
@@ -217,7 +231,7 @@ export default function ExperienceEngine({ onBack }: ExperienceEngineProps) {
       <canvas ref={canvasRef} style={{ flex: 1, width: '100%', height: '100%', touchAction: 'none' }} />
 
       {/* Diagnostics HUD (Right Panel) */}
-      <div style={{ width: 340, background: 'rgba(0,4,18,0.92)', borderLeft: '2px solid rgba(0,212,255,0.15)', display: 'flex', flexDirection: 'column', padding: 20, zIndex: 100 }}>
+      <div style={{ width: 'clamp(300px, 25vw, 400px)', background: 'rgba(0,4,18,0.95)', borderLeft: '2px solid rgba(0,212,255,0.15)', display: 'flex', flexDirection: 'column', padding: 20, zIndex: 100, overflow: 'hidden' }}>
         <div style={{ borderBottom: '1px solid rgba(0,212,255,0.2)', paddingBottom: 15, marginBottom: 20 }}>
           <div style={{ fontFamily: "'Press Start 2P', cursive", fontSize: '0.6rem', color: COLORS.accent, marginBottom: 8 }}>DIAGNOSTICS HUD</div>
           <div style={{ fontSize: '0.55rem', color: 'rgba(255,255,255,0.4)' }}>PHASE 4: DIGITAL TWIN SIMULATOR</div>
@@ -244,6 +258,19 @@ export default function ExperienceEngine({ onBack }: ExperienceEngineProps) {
             <Cpu size={12} /> GPIO STATUS (LIVE)
           </div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+            {[
+              { p: 'G12', active: isSummoned, label: 'MOT_L' },
+              { p: 'G13', active: isSummoned, label: 'MOT_R' },
+              { p: 'G25', active: phase === 'ALERT', label: 'BUZZ' },
+              { p: 'G04', active: phase !== 'IDLE', label: 'SERVO' },
+              { p: 'G18', active: true, label: 'ECHO' }
+            ].map((p, i) => (
+              <div key={i} style={{ border: `1px solid ${p.active ? COLORS.accent : 'rgba(255,255,255,0.1)'}`, padding: '4px 6px', borderRadius: 2, fontSize: '0.38rem', color: p.active ? COLORS.accent : 'rgba(255,255,255,0.3)', background: p.active ? `${COLORS.accent}11` : 'none' }}>
+                {p.label}
+              </div>
+            ))}
+          </div>
+        </div>
             {[
               { p: 'G12', active: isSummoned, label: 'MOT_L' },
               { p: 'G13', active: isSummoned, label: 'MOT_R' },

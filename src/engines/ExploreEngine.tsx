@@ -7,26 +7,26 @@ interface ExploreEngineProps { onBack: () => void; }
 
 // ── KAI Component Hotspot Data (report specs) ──────────────────────────────
 const KAI_PARTS = [
-  { id: 'gc9a01',   pos: [0, 0.7, 0.55] as [number,number,number], col: 0x06FFA5, color: '#06FFA5', title: 'GC9A01 TFT FACE',       info: '1.28" round TFT display (240×240px). KAI\'s face: renders animated eye expressions via TFT_eSPI library. SPI @ 80MHz. State→expression: Idle=neutral, Engaged=wide, Alert=narrow/red, Drowsy=drooped.' },
-  { id: 'hcsr04',   pos: [0, 0.55, 0.8] as [number,number,number], col: 0x76b900, color: '#76b900', title: 'HC-SR04 VISOR',          info: 'Ultrasonic sensor. Trig: GPIO 5, Echo: GPIO 18. Range 2–400cm ±1cm. Acts as KAI\'s eyes. Distance < 30cm = person detected = Engaged state trigger. 5V powered from L298N auxiliary output.' },
-  { id: 'esp32s3',  pos: [0, 0.1, 0]    as [number,number,number], col: 0x00d4ff, color: '#00d4ff', title: 'ESP32 MCU',            info: 'ESP32 WROOM-1 Master MCU. Dual-core Xtensa LX7 @ 240MHz. 512KB SRAM, 8MB Flash. Built-in WiFi/BT. Core 0: WiFi + Blynk cloud. Core 1: sensor reads every 100ms + actuator control.' },
-  { id: 'mpu6050',  pos: [0.3, 0.1, 0.2]as [number,number,number], col: 0xffaa00, color: '#ffaa00', title: 'MPU6050 IMU',             info: '6-Axis IMU (3-axis gyro + accel). I2C addr 0x68 on shared SDA/SCL bus (GPIO 21/22). Detects tilt, shake, orientation. Library: MPU6050 (I2CDevLib with DMP for stable output).' },
-  { id: 'bme280',   pos: [-0.3, 0.1, 0.2]as[number,number,number], col: 0xff5522, color: '#ff5522', title: 'BME280 ENVIRON.',         info: 'Environmental sensor: Temperature ±0.5°C, Humidity ±3%, Pressure. I2C addr 0x76, shares bus with MPU6050. Measured 26–31°C in lab. Library: Adafruit_BME280.' },
-  { id: 'mq2',      pos: [0.5, 0.0, 0]  as [number,number,number], col: 0xcc44ff, color: '#cc44ff', title: 'MQ-2 GAS SENSOR',        info: '"Forensic Nose." Analog ADC on GPIO 34. Detects LPG, propane, hydrogen, smoke. Threshold: 2500 ADC counts = Alert state. Triggers buzzer + haptics + red face. 20s warmup required.' },
-  { id: 'ldr',      pos: [-0.5, 0.0, 0] as [number,number,number], col: 0xffdd44, color: '#ffdd44', title: 'LDR LIGHT SENSOR',       info: 'Light Dependent Resistor. GPIO 35 ADC via 10kΩ voltage divider. Low reading = darkness = Drowsy state: KAI dims display, slows servo, reduces activity.' },
-  { id: 'mg90s',    pos: [0, 0.85, 0]   as [number,number,number], col: 0x44aaff, color: '#44aaff', title: 'MG90S SERVO (HEAD)',     info: 'Micro servo for head tilt. PWM on GPIO 4. Range 0°–180°. Engaged: 60° forward nod. Drowsy: 120° droop. Alert: rapid 70°↔110° sweep. Library: ESP32Servo (hardware timer).' },
-  { id: 'l298n',    pos: [0, -0.2, -0.4]as [number,number,number], col: 0xff3366, color: '#ff3366', title: 'L298N MOTOR DRIVER',    info: 'Dual H-bridge motor driver. Controls 2× N20 geared motors via GPIO 12/13/14/15 PWM. Also provides 5V regulated output for HC-SR04. Max 2A per channel from 7.4V battery input.' },
-  { id: 'n20',      pos: [0.7, -0.4, 0] as [number,number,number], col: 0x44ffaa, color: '#44ffaa', title: 'N20 MOTORS + WHEELS',   info: 'Dual N20 geared DC motors with rubber high-traction wheels. Differential drive: vary left/right speed for steering. Controlled via L298N. Autonomous: gentle spin when Engaged. Manual: Blynk joystick.' },
-  { id: 'n20b',     pos: [-0.7, -0.4, 0]as [number,number,number], col: 0x44ffaa, color: '#44ffaa', title: 'N20 MOTOR LEFT',        info: 'Left N20 motor. GPIO 14/15 PWM via L298N. In differential drive, runs forward with right motor for straight motion, or varies speed for turns. Rubber high-traction wheel reduces slip.' },
-  { id: 'buzzer',   pos: [0.55, 0.3, 0.3]as[number,number,number], col: 0xffbe0b, color: '#ffbe0b', title: 'PIEZO BUZZER',          info: 'Passive piezo buzzer on GPIO 25. Alert state: 880Hz warning chirp pattern. Engagement: short 440Hz pip. PWM-driven from ESP32 for tone control. Audio alert system.' },
-  { id: 'vibration',pos: [0, -0.1, 0.4] as [number,number,number], col: 0x8338ec, color: '#8338ec', title: 'VIBRATION MOTORS',      info: 'Dual haptic vibration motors. GPIO 2 (HAPTIC_L) and GPIO 27 (HAPTIC_R) via NPN transistors. Alert: rapid pulses. Engaged: single pulse on detection. NeoPixel aura ring (underglow) for ambient glow.' },
-  { id: 'battery',  pos: [0, 0.1, -0.7] as [number,number,number], col: 0xff8800, color: '#ff8800', title: '18650 BATTERY PACK',    info: '2× 18650 Li-ion cells in series = 7.4V nominal. ~4000mAh capacity. Powers entire KAI system. Nylon braided cable sleeving for organization. LD33CV steps down to 3.3V for ESP32 logic.' },
-  { id: 'relay',    pos: [-0.55, 0.3, 0.3]as[number,number,number],col: 0xFF006E, color: '#FF006E', title: '5V RELAY MODULE',       info: '5V single-channel relay on GPIO 26. Opto-isolated — ESP32 signal switches up to 10A/250VAC external circuit. Toggled via Blynk V-pin in Manual mode. Future: fan/LED strip control.' },
-  { id: 'ld33cv',   pos: [-0.3, -0.2, -0.4]as[number,number,number],col:0x3a86ff,color:'#3a86ff', title: 'LD33CV REGULATOR',      info: 'LD33CV linear voltage regulator: 7.4V → 3.3V. Powers ESP32, BME280, MPU6050, LDR voltage divider. TO-252 package. Max 1A output. Clean rail for sensitive I2C/SPI logic.' },
+  { id: 'gc9a01',   pos: [0, 0.75, 0.55] as [number,number,number], col: 0x06FFA5, color: '#06FFA5', title: 'GC9A01 TFT FACE',       info: '1.28" round TFT display. Renders ocular expressions (Idle, Engaged, Alert, Drowsy). SPI @ 80MHz.' },
+  { id: 'hcsr04',   pos: [0, 0.5, 0.95] as [number,number,number], col: 0x76b900, color: '#76b900', title: 'HC-SR04 VISOR',          info: 'Ultrasonic "eyes". Detects proximity < 30cm to trigger Engaged state. Dual transducer system.' },
+  { id: 'esp32s3',  pos: [0, 0.15, 0]    as [number,number,number], col: 0x00d4ff, color: '#00d4ff', title: 'ESP32 MCU',            info: 'Master MCU. Dual-core LX7 @ 240MHz. Handles sensor fusion and cloud uplink concurrently.' },
+  { id: 'mpu6050',  pos: [0.35, 0.15, 0.25]as [number,number,number], col: 0xffaa00, color: '#ffaa00', title: 'MPU6050 IMU',             info: '6-Axis Gyro/Accel. Detects kinetic movement and tilt orientation on the I2C bus.' },
+  { id: 'bme280',   pos: [-0.35, 0.15, 0.25]as[number,number,number], col: 0xff5522, color: '#ff5522', title: 'BME280 ENVIRON.',         info: 'P-T-H sensor. Monitors environmental safety. I2C shared bus with MPU6050.' },
+  { id: 'mq2',      pos: [0.55, 0.15, 0]  as [number,number,number], col: 0xcc44ff, color: '#cc44ff', title: 'MQ-2 GAS SENSOR',        info: 'Forensic gas sniffer. Detects smoke/LPG. ADC threshold > 2500 triggers Alert mode.' },
+  { id: 'ldr',      pos: [-0.55, 0.15, 0] as [number,number,number], col: 0xffdd44, color: '#ffdd44', title: 'LDR LIGHT SENSOR',       info: 'Light intensity monitor. Triggers Drowsy sleep state when ambient light falls below 20%.' },
+  { id: 'mg90s',    pos: [0, 1.0, 0]   as [number,number,number], col: 0x44aaff, color: '#44aaff', title: 'MG90S SERVO',           info: 'Head tilt mechanism. PWM driven on GPIO 4. Provides physical feedback for states.' },
+  { id: 'l298n',    pos: [0, -0.2, -0.45]as [number,number,number], col: 0xff3366, color: '#ff3366', title: 'L298N DRIVER',           info: 'Dual H-bridge. Drives N20 motors. High-mass heatsink for thermal dissipation.' },
+  { id: 'n20',      pos: [0.85, -0.45, 0.1] as [number,number,number], col: 0x06FFA5, color: '#06FFA5', title: 'N20 RIGHT MOTOR',      info: 'Geared DC motor with high-traction wheel. Controlled via PWM on GPIO 12/13.' },
+  { id: 'n20b',     pos: [-0.85, -0.45, 0.1]as [number,number,number], col: 0x06FFA5, color: '#06FFA5', title: 'N20 LEFT MOTOR',       info: 'Geared DC motor. High-torque output for precision locomotion.' },
+  { id: 'buzzer',   pos: [0.65, 0.45, 0.45]as[number,number,number], col: 0xffbe0b, color: '#ffbe0b', title: 'PIEZO BUZZER',          info: 'Audio alert system on GPIO 25. Fires 880Hz pulses during Alert state.' },
+  { id: 'vibration',pos: [0, -0.15, 0.55] as [number,number,number], col: 0x8338ec, color: '#8338ec', title: 'HAPTIC UNIT',          info: 'Internal vibration feedback + NeoPixel underglow for visual status indicator.' },
+  { id: 'battery',  pos: [0, 0.25, -0.85] as [number,number,number], col: 0xff8800, color: '#ff8800', title: 'LIPO POWER',           info: 'Dual 18650 cells (7.4V nominal). Core power source for the entire KAI architecture.' },
+  { id: 'relay',    pos: [-0.65, 0.45, 0.45]as[number,number,number],col: 0xFF006E, color: '#FF006E', title: 'POWER RELAY',          info: '5V Opto-isolated relay on GPIO 26. Switches high-power external loads via Blynk.' },
+  { id: 'ld33cv',   pos: [-0.45, -0.15, -0.55]as[number,number,number],col:0x3a86ff,color:'#3a86ff', title: 'LD33CV REGULATOR',      info: '7.4V → 3.3V Step-down regulator. Powers digital bus and MCU circuitry.' },
 ];
 
 // ── Box definitions for 3D stencil model ──────────────────────────────────
-interface BoxDef { x:number; y:number; z:number; w:number; h:number; d:number; col:number; em?:number; ei?:number; }
+interface BoxDef { x:number; y:number; z:number; w:number; h:number; d:number; col:number; em?:number; ei?:number; shape?: 'box' | 'sphere' | 'cylinder' | 'circle'; rx?:number; ry?:number; rz?:number; }
 
 function getKaiBoxes(): Record<string, { home:[number,number,number]; boxes:BoxDef[] }> {
   return {
@@ -51,13 +51,10 @@ function getKaiBoxes(): Record<string, { home:[number,number,number]; boxes:BoxD
     ]},
 
     // ── GC9A01 ROUND FACE ───────────────────────────────────────────────────
-    gc9a01: { home:[0, 0.7, 0.55], boxes:[
-      { x:0,y:0,z:0,  w:0.6,h:0.08,d:0.6, col:0x222233 }, // Outer bezel
-      { x:0,y:0,z:0.02, w:0.55,h:0.06,d:0.55, col:0x002a18, em:0x06FFA5, ei:0.95 }, // Display surface
-      { x:0,y:0,z:-0.08,w:0.45,h:0.05,d:0.45, col:0x111122 }, // Rear housing
-      // Internal wires
-      { x:0,y:-0.2,z:-0.1, w:0.02,h:0.4,d:0.02, col:0xff0000 },
-      { x:0.05,y:-0.2,z:-0.1, w:0.02,h:0.4,d:0.02, col:0x00ff00 },
+    gc9a01: { home:[0, 0.75, 0.55], boxes:[
+      { x:0,y:0,z:0,  w:0.35,h:0,d:0, col:0x111111, shape: 'sphere' }, // Head
+      { x:0,y:0,z:0.3, w:0.28,h:0,d:0, col:0x000000, em:0x06FFA5, ei:0.95, shape: 'circle' }, // Face
+      { x:0,y:-0.3,z:0, w:0.1,h:0.1,d:0.4, col:0x333333 }, // Neck
     ]},
 
     // ── HC-SR04 VISOR ───────────────────────────────────────────────────────
@@ -108,17 +105,13 @@ function getKaiBoxes(): Record<string, { home:[number,number,number]; boxes:BoxD
       { x:-0.15,y:0.1,z:0.15,w:0.08,h:0.12,d:0.08,col:0x004400 }, // Caps
       { x:0.15,y:0.1,z:0.15, w:0.08,h:0.12,d:0.08,col:0x004400 },
     ]},
-    n20: { home:[0.75, -0.45, 0.1], boxes:[
-      { x:0,y:0,z:0,   w:0.12,h:0.12,d:0.3,col:0x555555,em:0x44ffaa,ei:0.2 }, // Motor body
-      { x:0.1,y:0,z:0,  w:0.1,h:0.1,d:0.1, col:0x777700 }, // Gearbox
-      { x:0.15,y:0,z:0, w:0.35,h:0.35,d:0.1,col:0x111111 }, // Wheel tire
-      { x:0.15,y:0,z:0, w:0.2,h:0.2,d:0.11,col:0x222222,em:0x06FFA5,ei:0.3 }, // Rim
+    n20: { home:[0.85, -0.45, 0.1], boxes:[
+      { x:0,y:0,z:0,   w:0.2,h:0.2,d:0.12, col:0x111111, shape:'cylinder', rz:Math.PI/2 }, // Wheel R
+      { x:-0.1,y:0,z:0, w:0.12,h:0.12,d:0.3, col:0x555555, em:0x06FFA5, ei:0.2 }, // Motor body
     ]},
-    n20b: { home:[-0.75, -0.45, 0.1], boxes:[
-      { x:0,y:0,z:0,   w:0.12,h:0.12,d:0.3,col:0x555555,em:0x44ffaa,ei:0.2 },
-      { x:-0.1,y:0,z:0, w:0.1,h:0.1,d:0.1, col:0x777700 },
-      { x:-0.15,y:0,z:0,w:0.35,h:0.35,d:0.1,col:0x111111 },
-      { x:-0.15,y:0,z:0,w:0.2,h:0.2,d:0.11,col:0x222222,em:0x06FFA5,ei:0.3 },
+    n20b: { home:[-0.85, -0.45, 0.1], boxes:[
+      { x:0,y:0,z:0,   w:0.2,h:0.2,d:0.12, col:0x111111, shape:'cylinder', rz:Math.PI/2 }, // Wheel L
+      { x:0.1,y:0,z:0,  w:0.12,h:0.12,d:0.3, col:0x555555, em:0x06FFA5, ei:0.2 }, // Motor body
     ]},
     buzzer: { home:[0.6, 0.4, 0.4], boxes:[
       { x:0,y:0,z:0,w:0.15,h:0.1,d:0.15,col:0x111111,em:0xffbe0b,ei:0.75 }, // Piezo housing
@@ -289,9 +282,19 @@ export default function ExploreEngine({ onBack }: ExploreEngineProps) {
           p.emissive = new THREE.Color(b.em); 
           p.emissiveIntensity = b.ei ?? 0.2; 
         }
-        const m = new THREE.Mesh(new THREE.BoxGeometry(b.w, b.h, b.d), new THREE.MeshStandardMaterial(p));
+        let geom;
+        if (b.shape === 'sphere') geom = new THREE.SphereGeometry(b.w, 32, 24);
+        else if (b.shape === 'cylinder') geom = new THREE.CylinderGeometry(b.w, b.h, b.d, 32);
+        else if (b.shape === 'circle') geom = new THREE.CircleGeometry(b.w, 32);
+        else geom = new THREE.BoxGeometry(b.w, b.h, b.d);
+        
+        const m = new THREE.Mesh(geom, new THREE.MeshStandardMaterial(p));
         m.userData.baseEI = b.ei ?? 0.2;
-        m.position.set(b.x, b.y, b.z); m.userData.partId = id; pg.add(m);
+        m.position.set(b.x, b.y, b.z);
+        if (b.rx) m.rotation.x = b.rx;
+        if (b.ry) m.rotation.y = b.ry;
+        if (b.rz) m.rotation.z = b.rz;
+        m.userData.partId = id; pg.add(m);
       });
       pg.position.set(home[0], home[1], home[2]); root.add(pg);
       partGroup.current.set(id, pg); partTarget.current.set(id, [home[0], home[1], home[2]]);
@@ -408,13 +411,16 @@ export default function ExploreEngine({ onBack }: ExploreEngineProps) {
     const camera   = new THREE.PerspectiveCamera(50, W/H, 0.01, 200);
     const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false });
     renderer.setSize(W,H); renderer.setClearColor(0x050510,1); renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
-    scene.add(new THREE.AmbientLight(0x334455, 3.5));
-    const dl  = new THREE.DirectionalLight(0xffffff,3.0); dl.position.set(6,10,7); scene.add(dl);
-    const dl2 = new THREE.DirectionalLight(0x88ccff,1.8); dl2.position.set(-6,5,-4); scene.add(dl2);
-    const pl1 = new THREE.PointLight(0x06FFA5,4,20); pl1.position.set(-4,6,-4); scene.add(pl1);
-    const pl2 = new THREE.PointLight(0x00d4ff,3,18); pl2.position.set(4,5,4);  scene.add(pl2);
-    const pl3 = new THREE.PointLight(0xff5500,2,14); pl3.position.set(2,3,-5); scene.add(pl3);
-    scene.add(new THREE.HemisphereLight(0x223344,0x111122,1.5));
+    
+    // Ambient and Hemisphere lighting for uniform visibility
+    scene.add(new THREE.AmbientLight(0xffffff, 1.2));
+    scene.add(new THREE.HemisphereLight(0xffffff, 0x000000, 1.0));
+    
+    const dl  = new THREE.DirectionalLight(0xffffff,2.5); dl.position.set(6,10,7); scene.add(dl);
+    const dl2 = new THREE.DirectionalLight(0x88ccff,1.5); dl2.position.set(-6,5,-4); scene.add(dl2);
+    const pl1 = new THREE.PointLight(0x06FFA5,5,25); pl1.position.set(-4,6,-4); scene.add(pl1);
+    const pl2 = new THREE.PointLight(0x00d4ff,4,20); pl2.position.set(4,5,4);  scene.add(pl2);
+    
     const root = new THREE.Group(); scene.add(root);
     sceneRef.current=scene; cameraRef.current=camera; rendererRef.current=renderer; rootGroup.current=root;
     buildKai(); buildHotspots(); startLoopRef.current(); window.addEventListener('resize',resizeRenderer);
