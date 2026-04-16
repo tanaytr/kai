@@ -66,20 +66,24 @@ export default function ExperienceEngine({ onBack }: ExperienceEngineProps) {
     renderer.setSize(canvasRef.current.clientWidth, canvasRef.current.clientHeight);
     rendererRef.current = renderer;
 
-    const ambient = new THREE.AmbientLight(0xffffff, 0.4);
+    const ambient = new THREE.AmbientLight(0xffffff, 0.8);
     scene.add(ambient);
     
     // Hemisphere light for better overall visibility
-    const hemi = new THREE.HemisphereLight(0xffffff, 0x444444, 0.8);
+    const hemi = new THREE.HemisphereLight(0xffffff, 0x444444, 1.2);
     scene.add(hemi);
 
-    const spotlight = new THREE.SpotLight(0xffffff, 20);
+    const sun = new THREE.DirectionalLight(0xffffff, 2.0);
+    sun.position.set(5, 10, 5);
+    scene.add(sun);
+
+    const spotlight = new THREE.SpotLight(0xffffff, 40);
     spotlight.position.set(2, 5, 2);
     spotlight.castShadow = true;
     scene.add(spotlight);
 
     // KAI-specific point light to ensure visibility
-    const point = new THREE.PointLight(COLORS.accent, 2, 8);
+    const point = new THREE.PointLight(COLORS.accent, 5, 10);
     point.position.set(0, 1, 1);
     scene.add(point);
 
@@ -99,7 +103,11 @@ export default function ExperienceEngine({ onBack }: ExperienceEngineProps) {
     sceneRef.current.add(root);
 
     // Chassis (Body)
-    const chassisMat = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.05, metalness: 1.0 });
+    const chassisMat = new THREE.MeshStandardMaterial({ 
+      color: 0x222222, // Lightened from 0x111111 for better visibility
+      roughness: 0.15, 
+      metalness: 0.4 // Lower metalness for better visibility without environment map
+    });
     const body = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.4, 0.6), chassisMat);
     body.position.y = 0;
     root.add(body);
@@ -231,7 +239,17 @@ export default function ExperienceEngine({ onBack }: ExperienceEngineProps) {
       <canvas ref={canvasRef} style={{ flex: 1, width: '100%', height: '100%', touchAction: 'none' }} />
 
       {/* Diagnostics HUD (Right Panel) */}
-      <div style={{ width: 'clamp(300px, 25vw, 400px)', background: 'rgba(0,4,18,0.95)', borderLeft: '2px solid rgba(0,212,255,0.15)', display: 'flex', flexDirection: 'column', padding: 20, zIndex: 100, overflow: 'hidden' }}>
+      <div style={{ 
+        width: '320px', 
+        background: 'rgba(0,4,18,0.95)', 
+        borderLeft: '2px solid rgba(0,212,255,0.15)', 
+        display: 'flex', 
+        flexDirection: 'column', 
+        padding: 20, 
+        zIndex: 100, 
+        overflow: 'hidden',
+        height: '100%'
+      }}>
         <div style={{ borderBottom: '1px solid rgba(0,212,255,0.2)', paddingBottom: 15, marginBottom: 20 }}>
           <div style={{ fontFamily: "'Press Start 2P', cursive", fontSize: '0.6rem', color: COLORS.accent, marginBottom: 8 }}>DIAGNOSTICS HUD</div>
           <div style={{ fontSize: '0.55rem', color: 'rgba(255,255,255,0.4)' }}>PHASE 4: DIGITAL TWIN SIMULATOR</div>
@@ -304,7 +322,7 @@ export default function ExperienceEngine({ onBack }: ExperienceEngineProps) {
       </div>
 
       {/* Persistent Help HUD */}
-      <div style={{ position: 'fixed', bottom: 30, right: 370, background: 'rgba(0,4,18,0.9)', border: `1px solid ${COLORS.accent}`, padding: '12px 20px', borderRadius: 8, zIndex: 100, maxWidth: 320 }}>
+      <div style={{ position: 'fixed', bottom: 30, right: 350, background: 'rgba(0,4,18,0.9)', border: `1px solid ${COLORS.accent}`, padding: '12px 20px', borderRadius: 8, zIndex: 100, maxWidth: 300 }}>
         <div style={{ fontFamily: "'Press Start 2P', cursive", fontSize: '0.45rem', color: COLORS.accent, marginBottom: 8 }}>VIRTUAL TEST GUIDE</div>
         <div style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.8)', lineHeight: 1.5 }}>
           {phase === 'IDLE' && "KAI is in Idle. Try using the Summon button (Left) to move it or ignite the Matchstick (MQ-2) to test safety logic."}

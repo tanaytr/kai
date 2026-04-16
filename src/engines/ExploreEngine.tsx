@@ -277,7 +277,7 @@ export default function ExploreEngine({ onBack }: ExploreEngineProps) {
     Object.entries(getKaiBoxes()).forEach(([id, { home, boxes }]) => {
       const pg = new THREE.Group(); pg.userData.partId = id;
       boxes.forEach(b => {
-        const p: any = { color: b.col, roughness: 0.3, metalness: 0.7 };
+        const p: any = { color: b.col, roughness: 0.6, metalness: 0.4 };
         if (b.em !== undefined) { 
           p.emissive = new THREE.Color(b.em); 
           p.emissiveIntensity = b.ei ?? 0.2; 
@@ -714,7 +714,7 @@ export default function ExploreEngine({ onBack }: ExploreEngineProps) {
 
       {/* Hotspot sidebar */}
       {isAssembled && (
-        <div style={{ position:'fixed', top:80, right:14, zIndex:100, display:'flex', flexDirection:'column', gap:3, maxHeight:'calc(100vh - 180px)', overflowY:'auto' }}>
+        <div style={{ position:'fixed', top:80, right:16, zIndex:100, display:'flex', flexDirection:'column', gap:3, maxHeight:'calc(100vh - 180px)', overflowY:'auto', pointerEvents:'auto' }}>
           {KAI_PARTS.map(p => (
             <button key={p.id} onClick={() => {
               const isSel = selectedPart?.id === p.id;
