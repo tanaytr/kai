@@ -196,6 +196,9 @@ export default function ExploreEngine({ onBack }: ExploreEngineProps) {
   const [handPtr, setHandPtr]               = useState<{x:number;y:number}|null>(null);
   const [displayZoom, setDisplayZoom]       = useState(6);
   const [hoveredHotspot, setHoveredHotspot] = useState(false);
+  const [hoveredPartId, setHoveredPartId]   = useState<string | null>(null);
+  const [hoveredPartPos, setHoveredPartPos] = useState<{ x: number; y: number } | null>(null);
+  const [pinchSelectedIndex, setPinchSelectedIndex] = useState<number>(-1);
   const [isDragging, setIsDragging]         = useState(false);
   const [showHelp, setShowHelp]             = useState(false);
 
@@ -317,8 +320,40 @@ export default function ExploreEngine({ onBack }: ExploreEngineProps) {
         if (dist > 0.01) { settled = false; pg.position.x+=dx*speed; pg.position.y+=dy*speed; pg.position.z+=dz*speed; }
         else pg.position.set(tgt[0],tgt[1],tgt[2]);
       });
-      if (settled && phaseRef.current === 'exploding') { phaseRef.current = 'exploded'; setPhase('exploded'); }
-      if (settled && phaseRef.current === 'assembling') { phaseRef.current = 'done'; setPhase('done'); autoRotRef.current = true; setAutoRot(true); setShowSuccess(true); setTimeout(() => setShowSuccess(false), 5000); }
+      if (settled && phaseRef.current === 'exploding') { phaseRef.current = 'exploded'; setPhase('exploded'); setPinchSelectedIndex(0); }
+      if (settled && phaseRef.current === 'assembling') { phaseRef.current = 'done'; setPhase('done'); autoRotRef.current = true; setAutoRot(true); setShowSuccess(true); setTimeout(() => setShowSuccess(false), 5000); setPinchSelectedIndex(-1); }
+      
+      // If we are in exploded phase, check if all parts have returned home
+      if (phaseRef.current === 'exploded') {
+        let allHome = true;
+        const boxes = getKaiBoxes();
+        partTarget.current.forEach((tgt, id) => {
+          const home = boxes[id].home;
+          if (Math.abs(tgt[0] - home[0]) > 0.01 || Math.abs(tgt[1] - home[1]) > 0.01 || Math.abs(tgt[2] - home[2]) > 0.01) allHome = false;
+        });
+        if (allHome) { phaseRef.current = 'done'; setPhase('done'); autoRotRef.current = true; setAutoRot(true); setShowSuccess(true); setTimeout(() => setShowSuccess(false), 5000); setPinchSelectedIndex(-1); }
+      }
+
+      // Select pulse for pinch reassembly
+      if (phaseRef.current === 'exploded' && pinchSelectedIndex !== -1) {
+        const ids = Object.keys(getKaiBoxes());
+        const selectedId = ids[pinchSelectedIndex % ids.length];
+        const pg = partGroup.current.get(selectedId);
+        if (pg) {
+          const s = 1.0 + Math.sin(t * 8) * 0.05;
+          pg.scale.set(s, s, s);
+        }
+        // Reset others
+        ids.forEach((id, idx) => {
+          if (idx !== (pinchSelectedIndex % ids.length)) {
+            const opg = partGroup.current.get(id);
+            if (opg) opg.scale.set(1, 1, 1);
+          }
+        });
+      } else {
+        partGroup.current.forEach(pg => pg.scale.set(1, 1, 1));
+      }
+
       rendererRef.current.render(sceneRef.current, cameraRef.current);
       animRef.current = requestAnimationFrame(loop);
     };
@@ -385,6 +420,19 @@ export default function ExploreEngine({ onBack }: ExploreEngineProps) {
         if (pos) setHotspotScreenPos(pos);
         musicEngine.playSfx(900);
       }
+    } else if (phaseRef.current === 'exploded') {
+      const parts = Array.from(partGroup.current.values());
+      const hits = raycaster.current.intersectObjects(parts, true);
+      if (hits.length > 0) {
+        let obj = hits[0].object;
+        while (obj && !obj.userData.partId) obj = obj.parent;
+        if (obj?.userData.partId) {
+          const pid = obj.userData.partId;
+          const home = getKaiBoxes()[pid].home;
+          partTarget.current.set(pid, home);
+          musicEngine.playSfx(1000);
+        }
+      }
     } else {
       setSelectedPart(null); selectedRef.current = null; setHotspotScreenPos(null);
     }
@@ -406,6 +454,32 @@ export default function ExploreEngine({ onBack }: ExploreEngineProps) {
       const hits = raycaster.current.intersectObjects(hotspotsRef.current, true);
       const isOver = hits.length > 0;
       if (isOver !== hoveredHotspot) setHoveredHotspot(isOver);
+    }
+
+    // Raycast for part hover in exploded phase
+    if (phaseRef.current === 'exploded' && cameraRef.current && window.THREE) {
+      const rect = canvasRef.current!.getBoundingClientRect();
+      mouse3D.current.set(((e.clientX - rect.left) / rect.width) * 2 - 1, -((e.clientY - rect.top) / rect.height) * 2 + 1);
+      raycaster.current.setFromCamera(mouse3D.current, cameraRef.current);
+      const parts = Array.from(partGroup.current.values());
+      const hits = raycaster.current.intersectObjects(parts, true);
+      if (hits.length > 0) {
+        let obj = hits[0].object;
+        while (obj && !obj.userData.partId) obj = obj.parent;
+        const pid = obj?.userData.partId;
+        if (pid !== hoveredPartId) {
+          setHoveredPartId(pid);
+          if (pid) {
+            const pg = partGroup.current.get(pid);
+            if (pg) {
+              const pos = projectToScreen(pg.position.x, pg.position.y, pg.position.z);
+              setHoveredPartPos(pos);
+            }
+          } else setHoveredPartPos(null);
+        }
+      } else {
+        if (hoveredPartId) { setHoveredPartId(null); setHoveredPartPos(null); }
+      }
     }
 
     const dx = e.clientX - camDrag.current.lx, dy = e.clientY - camDrag.current.ly;
@@ -458,12 +532,27 @@ export default function ExploreEngine({ onBack }: ExploreEngineProps) {
       return;
     }
 
-    // Zoom and other gestures
+    if (g.type === 'pinch') {
+      if (phaseRef.current === 'exploded') {
+        setGestureLog('🤏 Pinch → Sequential Selection');
+        setPinchSelectedIndex(prev => prev + 1);
+        musicEngine.playSfx(700);
+      }
+      return;
+    }
+
     if (g.type === 'open') {
       if (g.blastFired && (phaseRef.current === 'assembled' || phaseRef.current === 'done')) {
         setGestureLog('💥 BLASTING…'); triggerBlast();
+      } else if (phaseRef.current === 'exploded' && pinchSelectedIndex !== -1) {
+        const ids = Object.keys(getKaiBoxes());
+        const selectedId = ids[pinchSelectedIndex % ids.length];
+        setGestureLog(`✋ Push → ${selectedId.toUpperCase()} Returning Home`);
+        const home = getKaiBoxes()[selectedId].home;
+        partTarget.current.set(selectedId, home);
+        musicEngine.playSfx(1000);
       } else if (phaseRef.current === 'exploded') {
-        // Reassemble handled by pinch now, but if they want open to reassemble too:
+        // Fallback for global assemble
         // triggerAssemble();
       } else {
         setGestureLog('✋ Open → Zooming IN');
@@ -478,16 +567,8 @@ export default function ExploreEngine({ onBack }: ExploreEngineProps) {
       return;
     }
 
-    if (g.type === 'pinch') {
-      if (phaseRef.current === 'exploded') {
-        setGestureLog('🤏 Pinch (Snap) → Reassembling…');
-        triggerAssemble();
-      }
-      return;
-    }
-
-    setGestureLog('🖐 Use ☝ for Rotation · ✋ Open for Zoom In · ✊ Fist for Zoom Out');
-  }, [triggerBlast, triggerAssemble, nudgeZoom]);
+    setGestureLog('☝ Rotate · 🤏 Pinch (Select) · ✋ Open (Push Home) · ✊ Fist (Zoom Out)');
+  }, [triggerBlast, triggerAssemble, nudgeZoom, pinchSelectedIndex]);
 
   useEffect(() => { if(gestureEnabled){ gestureController.subscribe(handleGesture); return()=>gestureController.unsubscribe(handleGesture); } else { setHandPtr(null); } }, [gestureEnabled, handleGesture]);
 
@@ -616,6 +697,17 @@ export default function ExploreEngine({ onBack }: ExploreEngineProps) {
         </div>
       )}
 
+      {/* Part Hover HUD */}
+      {phase === 'exploded' && hoveredPartId && hoveredPartPos && (
+        <div style={{ position:'fixed', left:hoveredPartPos.x, top:hoveredPartPos.y - 40, transform:'translateX(-50%)', zIndex:160, pointerEvents:'none' }}>
+          <div style={{ background:'rgba(0,10,30,0.95)', border:'1px solid #06FFA5', padding:'4px 12px', borderRadius:4, boxShadow:'0 0 20px rgba(6,255,165,0.3)', animation:'fadeInUp 0.3s ease' }}>
+            <div style={{ fontFamily:"'Press Start 2P',cursive", fontSize:'0.45rem', color:'#06FFA5', letterSpacing:1 }}>{hoveredPartId.toUpperCase()}</div>
+            <div style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:'0.4rem', color:'rgba(6,255,165,0.6)', marginTop:2 }}>CLICK TO REASSEMBLE</div>
+          </div>
+          <div style={{ width:2, height:15, background:'#06FFA5', margin:'0 auto', opacity:0.6 }} />
+        </div>
+      )}
+
       {/* Help overlay */}
       {showHelp && (
         <div style={{ position:'absolute', inset:0, zIndex:300, background:'rgba(5,5,15,0.92)', backdropFilter:'blur(10px)', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', padding:40 }}>
@@ -624,11 +716,11 @@ export default function ExploreEngine({ onBack }: ExploreEngineProps) {
             <div style={{ fontFamily:"'Press Start 2P',cursive", color:'#FFBE0B', fontSize:'0.8rem', marginBottom:20, textAlign:'center' }}>3D EXPLORE HELP</div>
             <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
               {[
-                { label:'ROTATE', text:'Click and hold mouse button while moving to rotate KAI.' },
-                { label:'ZOOM',   text:'Use mouse wheel or Zoom buttons (+/-) to inspect details.' },
-                { label:'BLAST',  text:'Click the BLAST button or use (Fist then Open Palm) gesture to see internals.' },
-                { label:'INFO',   text:'Click glowing hotspots or sidebar items to see technical specs.' },
-                { label:'RESET',  text:'Resets camera position and auto-rotation.' }
+                { label:'ROTATE', text:'Use (Index Pointer) gesture or Drag to rotate KAI.' },
+                { label:'ZOOM',   text:'Use (Open/Fist) gestures or Scroll to zoom.' },
+                { label:'BLAST',  text:'Fist then Open Palm to explode the model.' },
+                { label:'REBUILD', text:'Pinch to cycle parts, Open Palm to push home. Or click parts individually.' },
+                { label:'RESET',  text:'Resets camera and reassembles everything.' }
               ].map((h,i)=>(
                 <div key={i} style={{ display:'flex', gap:12 }}>
                   <div style={{ fontFamily:"'Press Start 2P',cursive", color:'#FFBE0B', fontSize:'0.45rem', width:80, flexShrink:0, marginTop:4 }}>{h.label}</div>
