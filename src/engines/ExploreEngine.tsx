@@ -403,22 +403,27 @@ export default function ExploreEngine({ onBack }: ExploreEngineProps) {
 
   const handleCanvasClick = (e: React.MouseEvent) => {
     if (camDrag.current.on) return;
-    if (phaseRef.current !== 'assembled' && phaseRef.current !== 'done') return;
+    if (phaseRef.current !== 'assembled' && phaseRef.current !== 'done' && phaseRef.current !== 'exploded') return;
     if (!cameraRef.current || !window.THREE) return;
     const THREE = window.THREE;
     const rect  = canvasRef.current!.getBoundingClientRect();
     mouse3D.current.set(((e.clientX - rect.left)/rect.width)*2-1, -((e.clientY - rect.top)/rect.height)*2+1);
     raycaster.current.setFromCamera(mouse3D.current, cameraRef.current);
-    const hits = raycaster.current.intersectObjects(hotspotsRef.current, true);
-    if (hits.length > 0) {
-      let obj = hits[0].object;
-      while (obj && !obj.userData.isHotspot) obj = obj.parent;
-      if (obj?.userData.isHotspot) {
-        const part = KAI_PARTS.find(p => p.id === obj.userData.id) ?? obj.userData;
-        setSelectedPart(part); selectedRef.current = part;
-        const pos = projectToScreen(part.pos[0], part.pos[1], part.pos[2]);
-        if (pos) setHotspotScreenPos(pos);
-        musicEngine.playSfx(900);
+
+    if (phaseRef.current === 'assembled' || phaseRef.current === 'done') {
+      const hits = raycaster.current.intersectObjects(hotspotsRef.current, true);
+      if (hits.length > 0) {
+        let obj = hits[0].object;
+        while (obj && !obj.userData.isHotspot) obj = obj.parent;
+        if (obj?.userData.isHotspot) {
+          const part = KAI_PARTS.find(p => p.id === obj.userData.id) ?? obj.userData;
+          setSelectedPart(part); selectedRef.current = part;
+          const pos = projectToScreen(part.pos[0], part.pos[1], part.pos[2]);
+          if (pos) setHotspotScreenPos(pos);
+          musicEngine.playSfx(900);
+        }
+      } else {
+        setSelectedPart(null); selectedRef.current = null; setHotspotScreenPos(null);
       }
     } else if (phaseRef.current === 'exploded') {
       const parts = Array.from(partGroup.current.values());
@@ -433,8 +438,6 @@ export default function ExploreEngine({ onBack }: ExploreEngineProps) {
           musicEngine.playSfx(1000);
         }
       }
-    } else {
-      setSelectedPart(null); selectedRef.current = null; setHotspotScreenPos(null);
     }
   };
 
