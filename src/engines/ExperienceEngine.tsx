@@ -36,6 +36,11 @@ export default function ExperienceEngine({ onBack }: ExperienceEngineProps) {
   const mountedRef     = useRef(true);
   const animRef        = useRef<any>(null);
 
+  // Group references for targeted animations
+  const chassisParts   = useRef<Map<string, any>>(new Map());
+  const eyeL           = useRef<any>(null);
+  const eyeR           = useRef<any>(null);
+
   const addLog = (msg: string) => {
     setLogs(prev => [msg, ...prev].slice(0, 12));
   };
@@ -103,15 +108,31 @@ export default function ExperienceEngine({ onBack }: ExperienceEngineProps) {
     rootGroup.current = root;
     sceneRef.current.add(root);
 
-    // Chassis (Body)
-    const chassisMat = new THREE.MeshStandardMaterial({ 
-      color: 0x111111, 
-      roughness: 0.15, 
-      metalness: 0.4 
+    // Dynamic data-driven parts (Simplified Explore Engine spec)
+    const boxes = [
+      { id: 'chassis', w:0.8, h:0.4, d:0.6, y:0, col:0x1a1a2e, em:0x00d4ff, ei:0.1 },
+      { id: 'core',    w:0.4, h:0.2, d:0.4, y:0.1, col:0x16213e, em:0x00ffff, ei:0.25 },
+      { id: 'batL',    w:0.15,h:0.04,d:0.25,x:-0.2, y:0.25, col:0x33b5e5, em:0x33b5e5, ei:0.4 },
+      { id: 'batR',    w:0.15,h:0.04,d:0.25,x:0.2,  y:0.25, col:0x33b5e5, em:0x33b5e5, ei:0.4 },
+      { id: 'trimL',   w:0.04,h:0.3, d:0.5, x:-0.41,y:0, col:0x06FFA5, em:0x06FFA5, ei:0.2 },
+      { id: 'trimR',   w:0.04,h:0.3, d:0.5, x:0.41, y:0, col:0x06FFA5, em:0x06FFA5, ei:0.2 },
+    ];
+
+    boxes.forEach(b => {
+      const g = new THREE.BoxGeometry(b.w, b.h, b.d);
+      const m = new THREE.MeshStandardMaterial({ 
+        color: b.col, 
+        emissive: b.em ? new THREE.Color(b.em) : undefined, 
+        emissiveIntensity: b.ei || 0,
+        roughness: 0.3,
+        metalness: 0.6
+      });
+      const mesh = new THREE.Mesh(g, m);
+      if (b.x) mesh.position.x = b.x;
+      if (b.y) mesh.position.y = b.y;
+      root.add(mesh);
+      chassisParts.current.set(b.id, mesh);
     });
-    const body = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.4, 0.6), chassisMat);
-    body.position.y = 0;
-    root.add(body);
 
     const wheelGeom = new THREE.CylinderGeometry(0.2, 0.2, 0.12, 32);
     wheelGeom.rotateZ(Math.PI / 2);
@@ -129,28 +150,39 @@ export default function ExperienceEngine({ onBack }: ExperienceEngineProps) {
     head.position.y = 0.45;
     root.add(head);
 
-    const headSphere = new THREE.Mesh(new THREE.SphereGeometry(0.35, 32, 24), chassisMat);
+    const headSphere = new THREE.Mesh(new THREE.SphereGeometry(0.35, 32, 24), new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.2 }));
     head.add(headSphere);
 
+    // Screen Group
+    const screenGroup = new THREE.Group();
+    screenGroup.position.set(0, 0, 0.28);
+    head.add(screenGroup);
+
     const faceGeom = new THREE.CircleGeometry(0.28, 32);
-    const faceMat = new THREE.MeshStandardMaterial({ 
-      color: 0x000000, 
-      emissive: new THREE.Color(COLORS.accent), 
-      emissiveIntensity: 0.8,
-      transparent: true,
-      opacity: 0.95
-    });
+    const faceMat = new THREE.MeshStandardMaterial({ color: 0x000000 });
     const facePlane = new THREE.Mesh(faceGeom, faceMat);
-    facePlane.position.set(0, 0, 0.28);
-    faceMesh.current = facePlane;
-    head.add(facePlane);
+    screenGroup.add(facePlane);
+
+    // Procedural Eyes
+    const eyeGeom = new THREE.SphereGeometry(0.04, 16, 16);
+    const eyeMat = new THREE.MeshBasicMaterial({ color: COLORS.accent });
+    
+    const eL = new THREE.Mesh(eyeGeom, eyeMat);
+    eL.position.set(-0.1, 0, 0.02);
+    screenGroup.add(eL);
+    eyeL.current = eL;
+
+    const eR = new THREE.Mesh(eyeGeom, eyeMat);
+    eR.position.set(0.1, 0, 0.02);
+    screenGroup.add(eR);
+    eyeR.current = eR;
 
     // Screen Glass Cover
     const glass = new THREE.Mesh(
       new THREE.CircleGeometry(0.3, 32),
       new THREE.MeshStandardMaterial({ color: 0x000000, metalness: 1.0, roughness: 0.1, transparent: true, opacity: 0.4 })
     );
-    glass.position.set(0, 0, 0.29);
+    glass.position.set(0, 0, 0.31);
     head.add(glass);
 
     const visor = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.1, 0.15), new THREE.MeshStandardMaterial({ color: 0x444444, metalness: 0.8 }));
@@ -158,7 +190,7 @@ export default function ExperienceEngine({ onBack }: ExperienceEngineProps) {
     head.add(visor);
   };
 
-  const currentZ = useRef(0);
+  const currentZ = useRef(-10); // Start originally away
   const targetZ  = useRef(0);
 
   const animate = () => {
@@ -187,23 +219,57 @@ export default function ExperienceEngine({ onBack }: ExperienceEngineProps) {
       const targetTilt = phase === 'DROWSY' ? 0.6 : (phase === 'ENGAGED' ? -0.2 : 0);
       headGroup.current.rotation.x += (targetTilt - headGroup.current.rotation.x) * 0.08;
 
-      // 3. Handle Face Expressions
-      if (faceMesh.current) {
-        const pulse = Math.abs(Math.sin(t * 3)) * 0.3;
-        faceMesh.current.material.emissiveIntensity = 0.5 + pulse;
-        if (phase === 'ALERT') {
-          faceMesh.current.material.emissive.set(COLORS.alert);
-          addLog("DANGER: CRITICAL VENTILATION REQUIRED");
-        }
-        else if (phase === 'DROWSY') faceMesh.current.material.emissive.set(COLORS.info);
-        else faceMesh.current.material.emissive.set(COLORS.accent);
+      // 3. Handle Dynamic Expressions & Mappings
+      if (eyeL.current && eyeR.current) {
+        const pulse = Math.abs(Math.sin(t * 3));
+        const alertFlash = phase === 'ALERT' && Math.sin(t * 15) > 0;
 
-        if (isTilted) {
-          rootGroup.current.rotation.z = Math.sin(t * 10) * 0.1; // Shake effect
-          rootGroup.current.rotation.x = Math.cos(t * 10) * 0.1;
+        // Eye Expressions Mapping
+        if (phase === 'ALERT') {
+          // X Eyes for Fire/Alert
+          eyeL.current.scale.y = 0.1; eyeL.current.rotation.z = Math.PI/4;
+          eyeR.current.scale.y = 0.1; eyeR.current.rotation.z = -Math.PI/4;
+          eyeL.current.material.color.set(COLORS.alert);
+          eyeR.current.material.color.set(COLORS.alert);
+        } else if (phase === 'DROWSY') {
+          // Half-closed eyelids for sleep
+          eyeL.current.scale.y = 0.2; eyeL.current.rotation.z = 0;
+          eyeR.current.scale.y = 0.2; eyeR.current.rotation.z = 0;
+          eyeL.current.material.color.set(COLORS.info);
+          eyeR.current.material.color.set(COLORS.info);
         } else {
-          rootGroup.current.rotation.z *= 0.9;
+          // Normal round eyes
+          eyeL.current.scale.y = 1; eyeL.current.rotation.z = 0;
+          eyeR.current.scale.y = 1; eyeR.current.rotation.z = 0;
+          eyeL.current.material.color.set(COLORS.accent);
+          eyeR.current.material.color.set(COLORS.accent);
+        }
+
+        // Global Thermal Glow (Chassis Reactions)
+        chassisParts.current.forEach((mesh, id) => {
+          if (mesh.material.emissive) {
+            if (alertFlash) mesh.material.emissive.set(COLORS.alert);
+            else if (id === 'core' && phase === 'ENGAGED') mesh.material.emissive.set(COLORS.accent);
+            else if (id === 'core' && phase === 'DROWSY') mesh.material.emissive.set(COLORS.info);
+            else mesh.material.emissiveIntensity = (id.startsWith('bat') ? 0.4 : 0.1) + pulse * 0.2;
+          }
+        });
+
+        // Physical Tilt Mapping (MPU6050 Shake)
+        if (isTilted) {
+          rootGroup.current.rotation.x = Math.sin(t * 8) * 0.25;
+          rootGroup.current.rotation.z = Math.cos(t * 8) * 0.15;
+          rootGroup.current.position.y = Math.abs(Math.sin(t * 12)) * 0.1; // Bounce
+        } else {
           rootGroup.current.rotation.x *= 0.9;
+          rootGroup.current.rotation.z *= 0.9;
+          rootGroup.current.position.y *= 0.9;
+        }
+
+        // Alert Jitter
+        if (phase === 'ALERT') {
+          headGroup.current.rotation.y = Math.sin(t * 20) * 0.15;
+          addLog("DANGER: CRITICAL VENTILATION REQUIRED");
         }
       }
     }
@@ -232,8 +298,8 @@ export default function ExperienceEngine({ onBack }: ExperienceEngineProps) {
   const triggerSummon = () => {
     if (isSummoned) return;
     addLog("SUMMON SIGNAL SENT → N20 PWM CONTROL");
-    currentZ.current = 2.5; 
-    targetZ.current = 0;
+    currentZ.current = -12; // Far away
+    targetZ.current = 0;    // Move to near
     setSimValues(v => ({ ...v, distance: 30 }));
     setIsSummoned(true);
     musicEngine.playSfx(200);
