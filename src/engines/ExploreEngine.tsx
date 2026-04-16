@@ -171,6 +171,14 @@ const EXPLODE_LOCS: Record<string,[number,number,number]> = {
   ld33cv:   [ -3.0, -1.5, -3.5 ],
 };
 
+// Helper: Get parts ordered spatially clockwise in the X-Z plane
+function getClockwiseOrderedIds(): string[] {
+  return Object.entries(EXPLODE_LOCS)
+    .map(([id, pos]) => ({ id, angle: Math.atan2(pos[2], pos[0]) }))
+    .sort((a, b) => a.angle - b.angle)
+    .map(x => x.id);
+}
+
 type Phase = 'assembled' | 'exploding' | 'exploded' | 'assembling' | 'done';
 declare global { interface Window { THREE: any; } }
 
@@ -221,6 +229,8 @@ export default function ExploreEngine({ onBack }: ExploreEngineProps) {
   const phaseRef    = useRef<Phase>('assembled');
   const raycaster   = useRef<any>(null);
   const mouse3D     = useRef<any>(null);
+  const pinchTimer  = useRef<number>(0);
+  const orderedIds  = useRef<string[]>(getClockwiseOrderedIds());
 
   useEffect(() => { phaseRef.current  = phase; },     [phase]);
   useEffect(() => { autoRotRef.current = autoRot; }, [autoRot]);
@@ -275,8 +285,12 @@ export default function ExploreEngine({ onBack }: ExploreEngineProps) {
       const pg = new THREE.Group(); pg.userData.partId = id;
       boxes.forEach(b => {
         const p: any = { color: b.col, roughness: 0.3, metalness: 0.7 };
-        if (b.em !== undefined) { p.emissive = new THREE.Color(b.em); p.emissiveIntensity = b.ei ?? 0.2; }
+        if (b.em !== undefined) { 
+          p.emissive = new THREE.Color(b.em); 
+          p.emissiveIntensity = b.ei ?? 0.2; 
+        }
         const m = new THREE.Mesh(new THREE.BoxGeometry(b.w, b.h, b.d), new THREE.MeshStandardMaterial(p));
+        m.userData.baseEI = b.ei ?? 0.2;
         m.position.set(b.x, b.y, b.z); m.userData.partId = id; pg.add(m);
       });
       pg.position.set(home[0], home[1], home[2]); root.add(pg);
@@ -336,22 +350,47 @@ export default function ExploreEngine({ onBack }: ExploreEngineProps) {
 
       // Select pulse for pinch reassembly
       if (phaseRef.current === 'exploded' && pinchSelectedIndex !== -1) {
-        const ids = Object.keys(getKaiBoxes());
+        const ids = orderedIds.current;
         const selectedId = ids[pinchSelectedIndex % ids.length];
         const pg = partGroup.current.get(selectedId);
         if (pg) {
-          const s = 1.0 + Math.sin(t * 8) * 0.05;
+          const s = 1.0 + Math.sin(t * 10) * 0.08;
           pg.scale.set(s, s, s);
+          // Boost emissive if meshes have it
+          pg.children.forEach((c: any) => {
+            if (c.material?.emissive) {
+              c.material.emissiveIntensity = (c.material.userData.baseEI ?? 0.2) + Math.abs(Math.sin(t * 10)) * 1.5;
+            }
+          });
         }
         // Reset others
         ids.forEach((id, idx) => {
           if (idx !== (pinchSelectedIndex % ids.length)) {
             const opg = partGroup.current.get(id);
-            if (opg) opg.scale.set(1, 1, 1);
+            if (opg) {
+              opg.scale.set(1, 1, 1);
+              opg.children.forEach((c: any) => {
+                if (c.material?.emissive) c.material.emissiveIntensity = c.material.userData.baseEI ?? 0.2;
+              });
+            }
           }
         });
       } else {
-        partGroup.current.forEach(pg => pg.scale.set(1, 1, 1));
+        partGroup.current.forEach(pg => {
+          pg.scale.set(1, 1, 1);
+          pg.children.forEach((c: any) => {
+            if (c.material?.emissive) c.material.emissiveIntensity = c.material.userData.baseEI ?? 0.2;
+          });
+        });
+      }
+
+      // Update sticky Hover HUD position
+      if (phaseRef.current === 'exploded' && hoveredPartId) {
+        const pg = partGroup.current.get(hoveredPartId);
+        if (pg) {
+          const pos = projectToScreen(pg.position.x, pg.position.y, pg.position.z);
+          if (pos) setHoveredPartPos(pos);
+        }
       }
 
       rendererRef.current.render(sceneRef.current, cameraRef.current);
@@ -537,9 +576,13 @@ export default function ExploreEngine({ onBack }: ExploreEngineProps) {
 
     if (g.type === 'pinch') {
       if (phaseRef.current === 'exploded') {
-        setGestureLog('🤏 Pinch → Sequential Selection');
-        setPinchSelectedIndex(prev => prev + 1);
-        musicEngine.playSfx(700);
+        const now = Date.now();
+        if (now - pinchTimer.current > 600) {
+          setGestureLog('🤏 Pinch Held → Sequential Selection (Auto-Cycle)');
+          setPinchSelectedIndex(prev => prev + 1);
+          musicEngine.playSfx(700);
+          pinchTimer.current = now;
+        }
       }
       return;
     }
@@ -548,15 +591,12 @@ export default function ExploreEngine({ onBack }: ExploreEngineProps) {
       if (g.blastFired && (phaseRef.current === 'assembled' || phaseRef.current === 'done')) {
         setGestureLog('💥 BLASTING…'); triggerBlast();
       } else if (phaseRef.current === 'exploded' && pinchSelectedIndex !== -1) {
-        const ids = Object.keys(getKaiBoxes());
+        const ids = orderedIds.current;
         const selectedId = ids[pinchSelectedIndex % ids.length];
         setGestureLog(`✋ Push → ${selectedId.toUpperCase()} Returning Home`);
         const home = getKaiBoxes()[selectedId].home;
         partTarget.current.set(selectedId, home);
         musicEngine.playSfx(1000);
-      } else if (phaseRef.current === 'exploded') {
-        // Fallback for global assemble
-        // triggerAssemble();
       } else {
         setGestureLog('✋ Open → Zooming IN');
         nudgeZoom(-0.5);
