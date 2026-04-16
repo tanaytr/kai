@@ -4,10 +4,11 @@ import HomeScreen from './components/HomeScreen';
 import PresentationEngine from './engines/PresentationEngine';
 import CircuitEngine from './engines/CircuitEngine';
 import ExploreEngine from './engines/ExploreEngine';
+import ExperienceEngine from './engines/ExperienceEngine';
 import MusicPanel from './components/MusicPanel';
 import { musicEngine, type MusicTheme, THEME_META } from './utils/musicEngine';
 
-type Screen = 'home' | 'presentation' | 'circuit' | 'explore';
+type Screen = 'home' | 'presentation' | 'circuit' | 'explore' | 'experience';
 
 export default function App() {
   const [screen, setScreen]               = useState<Screen>('home');
@@ -79,6 +80,7 @@ export default function App() {
         {screen === 'presentation' && <PresentationEngine {...screenProps} />}
         {screen === 'circuit'      && <CircuitEngine {...screenProps} />}
         {screen === 'explore'      && <ExploreEngine {...screenProps} />}
+        {screen === 'experience'   && <ExperienceEngine {...screenProps} />}
       </div>
 
       {/* Global floating controls */}

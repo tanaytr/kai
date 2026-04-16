@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
-import { BookOpen, Cpu, Compass, HelpCircle, X } from 'lucide-react';
+import { BookOpen, Cpu, Compass, HelpCircle, X, Radio } from 'lucide-react';
 import { musicEngine } from '../utils/musicEngine';
 
 interface HomeScreenProps {
-  onNavigate: (screen: 'presentation' | 'circuit' | 'explore') => void;
+  onNavigate: (screen: 'presentation' | 'circuit' | 'explore' | 'experience') => void;
 }
 
 const COLORS = ['#FF006E', '#8338EC', '#3A86FF', '#06FFA5', '#FFBE0B'];
@@ -99,6 +99,16 @@ export default function HomeScreen({ onNavigate }: HomeScreenProps) {
       color: '#8338EC',
       gradient: 'linear-gradient(180deg, #8338EC 0%, #6420C7 100%)',
       shadow: '0 8px 0 #4A1B9E, 0 8px 20px rgba(131,56,236,0.5)',
+    },
+    {
+      id: 'experience',
+      icon: Radio,
+      title: 'EXPERIENCE',
+      subtitle: 'PH-4 DIGITAL TWIN',
+      desc: 'Interactive simulator. Stress-test KAI with virtual gas (MQ-2), night cycles (LDR), and summon calls (N20)',
+      color: '#3A86FF',
+      gradient: 'linear-gradient(180deg, #3A86FF 0%, #0056D4 100%)',
+      shadow: '0 8px 0 #003B91, 0 8px 20px rgba(58,134,255,0.5)',
     },
   ];
 
@@ -262,7 +272,8 @@ export default function HomeScreen({ onNavigate }: HomeScreenProps) {
               {[
                 { title: 'REPORT MODE', text: 'Step-by-step technical presentation covering dual-core implementation, sensor specs, and project results.' },
                 { title: 'CIRCUIT MODE', text: 'Interactive pin diagram of the ESP32 and all peripherals. Click blocks to see GPIO mapping.' },
-                { title: 'EXPLORE MODE', text: '3D structural breakdown of the KAI robot. Explode the model to see individual components.' }
+                { title: 'EXPLORE MODE', text: '3D structural breakdown of the KAI robot. Explode the model to see individual components.' },
+                { title: 'EXPERIENCE MODE', text: 'Living Digital Twin. Interact with virtual matches and night cycles to stress-test KAI\'s behavioral logic.' }
               ].map((item, i) => (
                 <div key={i} style={{ borderLeft: '4px solid #FFBE0B', paddingLeft: 15 }}>
                   <div style={{ fontFamily:"'Press Start 2P',cursive", color:'#FFBE0B', fontSize:'0.5rem', marginBottom:8 }}>{item.title}</div>
