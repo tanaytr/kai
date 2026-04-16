@@ -20,11 +20,11 @@ interface ComponentDef {
 
 const COMPONENTS: ComponentDef[] = [
   // ── CONTROLLER (center) ───────────────────────────────────────────────────
-  { id: 'esp32s3', label: 'ESP32-S3', sublabel: 'Dual-Core 240MHz MCU', color: '#00d4ff',
+  { id: 'esp32s3', label: 'ESP32', sublabel: 'Dual-Core 240MHz MCU', color: '#00d4ff',
     x: 340, y: 240, w: 180, h: 220, group: 'controller',
     pins: ['GPIO 1-9','GPIO 10-19','GPIO 20-27','GPIO 34,35','SDA GPIO 21','SCL GPIO 22'],
     protocol: 'ALL PROTOCOLS',
-    info: 'ESP32-S3 WROOM-1 Master MCU. Dual-core Xtensa LX7 @ 240MHz, 512KB SRAM, 8MB Flash, built-in WiFi/BT. Core 0: WiFi + Blynk. Core 1: Sensors + Actuators. Powers the entire KAI system.' },
+    info: 'ESP32 WROOM-1 Master MCU. Dual-core Xtensa LX7 @ 240MHz, 512KB SRAM, 8MB Flash, built-in WiFi/BT. Core 0: WiFi + Blynk. Core 1: Sensors + Actuators. Powers the entire KAI system.' },
 
   // ── SENSORS (left column) ─────────────────────────────────────────────────
   { id: 'hcsr04', label: 'HC-SR04', sublabel: 'Ultrasonic Distance', color: '#76b900',
@@ -75,7 +75,7 @@ const COMPONENTS: ComponentDef[] = [
     x: 680, y: 145, w: 140, h: 70, group: 'power',
     pins: ['VIN: 7.4V from battery','VOUT: 3.3V','GND','Capacitors for stability'],
     protocol: 'POWER',
-    info: 'LD33CV Linear Voltage Regulator. Steps 7.4V → 3.3V for ESP32-S3 and all 3.3V logic components (BME280, MPU6050, LDR voltage divider). Simple TO-252 package. Max 1A output. Quiet, stable 3.3V rail.' },
+    info: 'LD33CV Linear Voltage Regulator. Steps 7.4V → 3.3V for ESP32 and all 3.3V logic components (BME280, MPU6050, LDR voltage divider). Simple TO-252 package. Max 1A output. Quiet, stable 3.3V rail.' },
 
   { id: 'l298n', label: 'L298N', sublabel: 'Dual H-Bridge Motor Driver', color: '#ff3366',
     x: 680, y: 250, w: 140, h: 70, group: 'power',
@@ -119,7 +119,7 @@ const COMPONENTS: ComponentDef[] = [
     x: 530, y: 40, w: 120, h: 80, group: 'cloud',
     pins: ['WiFi 2.4GHz','V-pins: sensor data','Joystick: V5/V6','Relay: V7','AI API: V10'],
     protocol: 'WiFi / MQTT',
-    info: 'Blynk IoT Cloud + AI API. ESP32-S3 streams all 5 sensor readings every 500ms via V-pins. Manual mode joystick (V5,V6) controls N20 motors. V7 toggles relay. Blynk AI API (V10) enables natural language interaction with KAI\'s live sensor data.' },
+    info: 'Blynk IoT Cloud + AI API. ESP32 streams all 5 sensor readings every 500ms via V-pins. Manual mode joystick (V5,V6) controls N20 motors. V7 toggles relay. Blynk AI API (V10) enables natural language interaction with KAI\'s live sensor data.' },
 ];
 
 // ── Wire connections (from, to, color, label) ──────────────────────────────
@@ -356,7 +356,7 @@ export default function CircuitEngine({ onBack }: CircuitEngineProps) {
             })}
 
             {/* Title */}
-            <text x={CANVAS_W / 2} y={CANVAS_H - 10} textAnchor="middle" fill="rgba(0,212,255,0.2)" fontSize="9" fontFamily="'JetBrains Mono',monospace" letterSpacing="3">KAI SENTINEL — UNIFIED PHASE 1 & 2 PIN DIAGRAM · ESP32-S3 MASTER MCU</text>
+            <text x={CANVAS_W / 2} y={CANVAS_H - 10} textAnchor="middle" fill="rgba(0,212,255,0.2)" fontSize="9" fontFamily="'JetBrains Mono',monospace" letterSpacing="3">KAI SENTINEL — UNIFIED PHASE 1 & 2 PIN DIAGRAM · ESP32 MASTER MCU</text>
           </g>
         </svg>
 

@@ -46,7 +46,7 @@ function AnimatedTitle() {
         YOUR PRESENCE, EXTENDED.
       </div>
       <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 'clamp(0.35rem, 0.7vw, 0.5rem)', color: 'rgba(0,212,255,0.65)', textAlign: 'center', marginTop: 4, letterSpacing: '1.5px' }}>
-        ESP32-S3 · 5 SENSORS · DUAL-CORE · BLYNK IoT
+        ESP32 · 5 SENSORS · DUAL-CORE · BLYNK IoT
       </div>
       {/* Floating tetris blocks */}
       <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', overflow: 'visible' }}>
@@ -75,7 +75,7 @@ export default function HomeScreen({ onNavigate }: HomeScreenProps) {
       icon: BookOpen,
       title: 'REPORT',
       subtitle: 'KAI PRESENTATION',
-      desc: '16 technical slides: ESP32-S3 dual-core, 5 sensors, actuators, state machine, Blynk IoT & results',
+      desc: '16 technical slides: ESP32 dual-core, 5 sensors, actuators, state machine, Blynk IoT & results',
       color: '#FF006E',
       gradient: 'linear-gradient(180deg, #FF006E 0%, #C1004E 100%)',
       shadow: '0 8px 0 #8B0040, 0 8px 20px rgba(255,0,110,0.5)',
@@ -85,7 +85,7 @@ export default function HomeScreen({ onNavigate }: HomeScreenProps) {
       icon: Cpu,
       title: 'CIRCUIT',
       subtitle: 'INTERACTIVE PIN DIAGRAM',
-      desc: 'KAI Sentinel unified pin diagram — click ESP32-S3, all 5 sensors & 5 actuator groups for GPIO specs',
+      desc: 'KAI Sentinel unified pin diagram — click ESP32, all 5 sensors & 5 actuator groups for GPIO specs',
       color: '#06FFA5',
       gradient: 'linear-gradient(180deg, #06FFA5 0%, #05CC84 100%)',
       shadow: '0 8px 0 #048F5F, 0 8px 20px rgba(6,255,165,0.5)',
@@ -261,7 +261,7 @@ export default function HomeScreen({ onNavigate }: HomeScreenProps) {
             <div style={{ display:'flex', flexDirection:'column', gap:20 }}>
               {[
                 { title: 'REPORT MODE', text: 'Step-by-step technical presentation covering dual-core implementation, sensor specs, and project results.' },
-                { title: 'CIRCUIT MODE', text: 'Interactive pin diagram of the ESP32-S3 and all peripherals. Click blocks to see GPIO mapping.' },
+                { title: 'CIRCUIT MODE', text: 'Interactive pin diagram of the ESP32 and all peripherals. Click blocks to see GPIO mapping.' },
                 { title: 'EXPLORE MODE', text: '3D structural breakdown of the KAI robot. Explode the model to see individual components.' }
               ].map((item, i) => (
                 <div key={i} style={{ borderLeft: '4px solid #FFBE0B', paddingLeft: 15 }}>

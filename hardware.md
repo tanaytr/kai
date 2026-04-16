@@ -2,32 +2,42 @@
 
 This document provides a comprehensive breakdown of the hardware components used in the KAI (Kinetic Artificial Intelligence) engine, their specific roles, and a preparation guide for technical Viva examinations.
 
-## 1. Hardware Component List
+## 1. Core Controller
 
 | Component | Purpose / Action | Interface |
 |:---|:---|:---|
-| **ESP32-S3 WROOM-1** | Master MCU. Handles dual-core processing: Core 0 for WiFi/Cloud, Core 1 for real-time sensor loops. | N/A |
-| **GC9A01 TFT Display** | KAI's 1.28" round face. Renders ocular expressions and status animations. | SPI (80MHz) |
+| **ESP32** | Master MCU. Handles dual-core processing: Core 0 for WiFi/Cloud, Core 1 for real-time sensor loops. | N/A |
+| **LD33CV Regulator** | LDO Regulator. Steps 7.4V down to a stable 3.3V for sensitive logic components. | Voltage Reg. |
+| **18650 Li-ion Pack** | 7.4V Power source. Provides high capacity for long-duration operation. | DC Power |
+
+## 2. Sensor Suite (Inputs)
+
+| Component | Purpose / Action | Interface |
+|:---|:---|:---|
 | **HC-SR04 Ultrasonic** | Object detection and distance measurement (2cm–400cm). Triggers "Engaged" state. | Digital (Trig/Echo) |
 | **MPU6050 IMU** | 6-Axis Motion Tracking. Detects tilt, shake, and orientation for balance telemetry. | I2C (0x68) |
 | **BME280 Sensor** | Environmental telemetry: Temperature, Humidity, and Barometric Pressure. | I2C (0x76) |
 | **MQ-2 Gas Sensor** | Smoke and LPG detection. Triggers "Alert" state and haptic/audio warnings. | Analog (ADC) |
 | **LDR (Photoresistor)** | Ambient light sensing. Adjusts KAI's "Drowsy" state in dark environments. | Analog (ADC) |
+
+## 3. Actuator System (Outputs)
+
+| Component | Purpose / Action | Interface |
+|:---|:---|:---|
+| **GC9A01 TFT Display** | KAI's 1.28" round face. Renders ocular expressions and status animations. | SPI (80MHz) |
 | **MG90S Micro Servo** | Controls the neck mechanism for physical head-tilt expressions. | PWM (Hardware) |
 | **L298N Motor Driver** | Dual H-bridge driver. Bridges low-power logic to high-power DC motors. | PWM / Digital |
 | **N20 Geared Motors** | High-torque locomotion at 6V. Enables differential drive steering. | DC Power |
 | **Piezo Buzzer** | Audio feedback system for alerts and interaction confirmation. | PWM (Tones) |
 | **Vibration Motors** | Tactical haptic feedback for user interaction and system alerts. | Digital (NPN) |
-| **18650 Li-ion Pack** | 7.4V Power source. Provides high capacity for long-duration operation. | DC Power |
-| **LD33CV Regulator** | LDO Regulator. Steps 7.4V down to a stable 3.3V for sensitive logic components. | Voltage Reg. |
 | **5V Relay Module** | Opto-isolated switch for controlling external high-voltage AC/DC loads. | Digital |
 
 ---
 
-## 2. Technical Viva Questions & Answers
+## 4. Technical Viva Questions & Answers
 
-### Q1: Why was the ESP32-S3 chosen over a standard Arduino Uno?
-**A:** The ESP32-S3 provides a dual-core Xtensa® 32-bit LX7 architecture running at 240MHz, which is far superior to Arduino's 16MHz. It also includes integrated WiFi and Bluetooth (essential for the Blynk IoT interface) and has native support for AI instructions and internal hall effects sensors.
+### Q1: Why was the ESP32 chosen over a standard Arduino Uno?
+**A:** The ESP32 provides a dual-core Xtensa® 32-bit LX7 architecture running at 240MHz, which is far superior to Arduino's 16MHz. It also includes integrated WiFi and Bluetooth (essential for the Blynk IoT interface) and has native support for AI instructions and internal hall effects sensors.
 
 ### Q2: How does the project handle multiple I2C sensors on a single bus?
 **A:** The MPU6050 and BME280 share the same I2C SDA (GPIO 21) and SCL (GPIO 22) pins. They are distinguished by their unique hardware addresses: `0x68` for the MPU6050 and `0x76` for the BME280. The Master (ESP32) communicates with them sequentially.

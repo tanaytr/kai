@@ -46,7 +46,7 @@ const SLIDES = [
     subtitle: 'Kinetic Artificial Intelligence — Your Presence, Extended',
     color: '#06FFA5',
     content: [
-      'KAI is a compact, battery-powered robotic device built on an ESP32-S3 microcontroller for SVKM\'s NMIMS Indore',
+      'KAI is a compact, battery-powered robotic device built on an ESP32 microcontroller for SVKM\'s NMIMS Indore',
       'Course: Microprocessors and Microcontrollers (702CO0C072) — Semester IV, Academic Year 2025-26',
       'Faculty: Dr. Nirmal K Gupta | Team: Tanay Trivedi (F061), Diksha Rathi (F118), Srishti Jain (F149)',
       'KAI monitors 5 environmental parameters and reacts through actuators and a round GC9A01 display face',
@@ -65,7 +65,7 @@ const SLIDES = [
       'Integration of OLED/TFT facial expressions and ultrasonic visual field.',
     ],
     image: '/img.png',
-    detail: 'For representational purposes only. The KAI chassis is designed to be modular, allowing for easy access to the ESP32-S3 core and the 5-sensor array. The rounded "head" houses the GC9A01 display face, giving KAI its distinctive expressive personality.',
+    detail: 'For representational purposes only. The KAI chassis is designed to be modular, allowing for easy access to the ESP32 core and the 5-sensor array. The rounded "head" houses the GC9A01 display face, giving KAI its distinctive expressive personality.',
   },
   {
     title: 'PROJECT MOTIVATION',
@@ -95,10 +95,10 @@ const SLIDES = [
   },
   {
     title: 'SYSTEM ARCHITECTURE',
-    subtitle: 'Dual-Core ESP32-S3 Design',
+    subtitle: 'Dual-Core ESP32 Design',
     color: '#3A86FF',
     content: [
-      'ESP32-S3 (Dual-core Xtensa LX7 @ 240MHz) — Core 0 and Core 1 run independently and simultaneously',
+      'ESP32 (Dual-core Xtensa LX7 @ 240MHz) — Core 0 and Core 1 run independently and simultaneously',
       'Core 0: WiFi stack + Blynk cloud communication — handles all network I/O without blocking sensors',
       'Core 1: Real-time sensor reading every 100ms + state machine evaluation + actuator control',
       'Dual-core architecture prevents network latency from affecting sensor response time',
@@ -111,7 +111,7 @@ const SLIDES = [
     subtitle: 'Controller, Sensors, Actuators & Power',
     color: '#FF006E',
     content: [
-      'Controller: ESP32-S3 (Dual-core 240MHz, built-in WiFi/BT, 512KB SRAM, 8MB Flash)',
+      'Controller: ESP32 (Dual-core 240MHz, built-in WiFi/BT, 512KB SRAM, 8MB Flash)',
       'Sensors: HC-SR04 (Ultrasonic Distance), MPU6050 (6-Axis IMU), BME280 (Temp/Humidity/Pressure), MQ-2 (Gas), LDR (Light)',
       'Actuators: GC9A01 Round TFT (1.28" face), MG90S Servo (head tilt), Dual N20 Motors via L298N (drive), Vibration Motors, Piezo Buzzer, 5V Relay',
       'Power: 2× 18650 Li-ion cells (7.4V) stepped down via LD33CV (3.3V) and L298N (motor power)',
@@ -151,7 +151,7 @@ const SLIDES = [
     color: '#FF8800',
     content: [
       '2× 18650 Li-ion cells in series: 7.4V nominal, sufficient capacity for multi-hour operation',
-      'LD33CV Linear Regulator: steps 7.4V → 3.3V for ESP32-S3 and logic-level components (BME280, MPU6050)',
+      'LD33CV Linear Regulator: steps 7.4V → 3.3V for ESP32 and logic-level components (BME280, MPU6050)',
       'L298N H-Bridge Dual Function: acts as both motor driver AND 5V regulated output for HC-SR04 (5V sensor)',
       '5V Single-Channel Relay Module: controls high-current external circuits safely (GPIO 26)',
       'Nylon braided cable sleeving keeps power runs organized and prevents shorts in the compact chassis',
@@ -164,12 +164,12 @@ const SLIDES = [
     color: '#CC44FF',
     content: [
       'I²C Bus (SDA GPIO 21, SCL GPIO 22): BME280 + MPU6050 share the same two-wire bus with unique addresses',
-      'SPI Bus: GC9A01 TFT display — high-speed serial for pixel pushing (up to 80MHz on ESP32-S3)',
+      'SPI Bus: GC9A01 TFT display — high-speed serial for pixel pushing (up to 80MHz on ESP32)',
       'Direct GPIO: HC-SR04 trigger/echo, MQ-2 analog, LDR analog, relay, servo PWM, motor PWM, haptics',
       'Serial/I2C: ESP32-CAM (Vision module) communicates via Serial/I2C for vision pipeline integration',
-      'WiFi: ESP32-S3 built-in connects to Blynk IoT cloud + AI API (Blynk App joystick, V-pin data streaming)',
+      'WiFi: ESP32 built-in connects to Blynk IoT cloud + AI API (Blynk App joystick, V-pin data streaming)',
     ],
-    detail: 'Using I2C for environmental sensors elegantly solves bus contention — the ESP32-S3 polls BME280 then MPU6050 sequentially on the same two wires. SPI for the display is essential: pushing 240×240px at 30fps requires bandwidth that I2C cannot provide. This protocol diversity makes KAI an ideal teaching device for the Microprocessors course.',
+    detail: 'Using I2C for environmental sensors elegantly solves bus contention — the ESP32 polls BME280 then MPU6050 sequentially on the same two wires. SPI for the display is essential: pushing 240×240px at 30fps requires bandwidth that I2C cannot provide. This protocol diversity makes KAI an ideal teaching device for the Microprocessors course.',
   },
   {
     title: 'FIRMWARE ARCHITECTURE',
@@ -242,19 +242,19 @@ const SLIDES = [
     color: '#CC44FF',
     content: [
       'OV2640 Camera Module: add computer vision for face detection and person tracking — feeds into Engaged state',
-      'TensorFlow Lite on ESP32-S3: gesture recognition from OV2640 — KAI responds to hand waves without touching',
+      'TensorFlow Lite on ESP32: gesture recognition from OV2640 — KAI responds to hand waves without touching',
       'LoRa Module: extended-range communication beyond WiFi — mesh network of multiple KAI units',
       'DRV8833 Motor Driver: replace L298N for higher efficiency dual H-bridge, lower heat, smaller footprint',
       'Voice synthesis: I2S speaker + TTS library for KAI to verbally announce its state ("Gas detected!")',
     ],
-    detail: 'The ESP32-S3 was chosen specifically for its PSRAM (8MB) and its ability to run TensorFlow Lite Micro models. The camera + TFLite combination would enable on-device face detection without cloud round-trips — making KAI truly autonomous. LoRa extends KAI from a room gadget to a campus-wide sensor network.',
+    detail: 'The ESP32 was chosen specifically for its PSRAM (8MB) and its ability to run TensorFlow Lite Micro models. The camera + TFLite combination would enable on-device face detection without cloud round-trips — making KAI truly autonomous. LoRa extends KAI from a room gadget to a campus-wide sensor network.',
   },
   {
     title: 'CONCLUSION',
     subtitle: 'KAI — A Living Microcontroller Textbook',
     color: '#06FFA5',
     content: [
-      'KAI successfully demonstrates ESP32-S3 dual-core architecture, multi-protocol communication, and real-time control',
+      'KAI successfully demonstrates ESP32 dual-core architecture, multi-protocol communication, and real-time control',
       'Integrates I2C, SPI, analog ADC, PWM, GPIO, WiFi — covering all major microcontroller interface types',
       'State machine design + hardware timers + Core isolation = professional-grade embedded firmware structure',
       'Physical, expressive output makes sensor data instantly understandable — a human-computer interaction lesson',
@@ -267,7 +267,7 @@ const SLIDES = [
     subtitle: 'Data Sources & Documentation Used',
     color: '#FFBE0B',
     content: [
-      '① ESP32-S3 Technical Reference Manual — Espressif Systems, 2023 (docs.espressif.com)',
+      '① ESP32 Technical Reference Manual — Espressif Systems, 2023 (docs.espressif.com)',
       '② TFT_eSPI Library — Bodmer, GitHub (github.com/Bodmer/TFT_eSPI)',
       '③ Blynk IoT Documentation — Blynk Inc. 2024 (docs.blynk.io)',
       '④ Adafruit BME280 Library — Adafruit Industries (github.com/adafruit/Adafruit_BME280_Library)',

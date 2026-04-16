@@ -9,7 +9,7 @@ interface ExploreEngineProps { onBack: () => void; }
 const KAI_PARTS = [
   { id: 'gc9a01',   pos: [0, 0.7, 0.55] as [number,number,number], col: 0x06FFA5, color: '#06FFA5', title: 'GC9A01 TFT FACE',       info: '1.28" round TFT display (240×240px). KAI\'s face: renders animated eye expressions via TFT_eSPI library. SPI @ 80MHz. State→expression: Idle=neutral, Engaged=wide, Alert=narrow/red, Drowsy=drooped.' },
   { id: 'hcsr04',   pos: [0, 0.55, 0.8] as [number,number,number], col: 0x76b900, color: '#76b900', title: 'HC-SR04 VISOR',          info: 'Ultrasonic sensor. Trig: GPIO 5, Echo: GPIO 18. Range 2–400cm ±1cm. Acts as KAI\'s eyes. Distance < 30cm = person detected = Engaged state trigger. 5V powered from L298N auxiliary output.' },
-  { id: 'esp32s3',  pos: [0, 0.1, 0]    as [number,number,number], col: 0x00d4ff, color: '#00d4ff', title: 'ESP32-S3 MCU',            info: 'ESP32-S3 WROOM-1 Master MCU. Dual-core Xtensa LX7 @ 240MHz. 512KB SRAM, 8MB Flash. Built-in WiFi/BT. Core 0: WiFi + Blynk cloud. Core 1: sensor reads every 100ms + actuator control.' },
+  { id: 'esp32s3',  pos: [0, 0.1, 0]    as [number,number,number], col: 0x00d4ff, color: '#00d4ff', title: 'ESP32 MCU',            info: 'ESP32 WROOM-1 Master MCU. Dual-core Xtensa LX7 @ 240MHz. 512KB SRAM, 8MB Flash. Built-in WiFi/BT. Core 0: WiFi + Blynk cloud. Core 1: sensor reads every 100ms + actuator control.' },
   { id: 'mpu6050',  pos: [0.3, 0.1, 0.2]as [number,number,number], col: 0xffaa00, color: '#ffaa00', title: 'MPU6050 IMU',             info: '6-Axis IMU (3-axis gyro + accel). I2C addr 0x68 on shared SDA/SCL bus (GPIO 21/22). Detects tilt, shake, orientation. Library: MPU6050 (I2CDevLib with DMP for stable output).' },
   { id: 'bme280',   pos: [-0.3, 0.1, 0.2]as[number,number,number], col: 0xff5522, color: '#ff5522', title: 'BME280 ENVIRON.',         info: 'Environmental sensor: Temperature ±0.5°C, Humidity ±3%, Pressure. I2C addr 0x76, shares bus with MPU6050. Measured 26–31°C in lab. Library: Adafruit_BME280.' },
   { id: 'mq2',      pos: [0.5, 0.0, 0]  as [number,number,number], col: 0xcc44ff, color: '#cc44ff', title: 'MQ-2 GAS SENSOR',        info: '"Forensic Nose." Analog ADC on GPIO 34. Detects LPG, propane, hydrogen, smoke. Threshold: 2500 ADC counts = Alert state. Triggers buzzer + haptics + red face. 20s warmup required.' },
@@ -22,7 +22,7 @@ const KAI_PARTS = [
   { id: 'vibration',pos: [0, -0.1, 0.4] as [number,number,number], col: 0x8338ec, color: '#8338ec', title: 'VIBRATION MOTORS',      info: 'Dual haptic vibration motors. GPIO 2 (HAPTIC_L) and GPIO 27 (HAPTIC_R) via NPN transistors. Alert: rapid pulses. Engaged: single pulse on detection. NeoPixel aura ring (underglow) for ambient glow.' },
   { id: 'battery',  pos: [0, 0.1, -0.7] as [number,number,number], col: 0xff8800, color: '#ff8800', title: '18650 BATTERY PACK',    info: '2× 18650 Li-ion cells in series = 7.4V nominal. ~4000mAh capacity. Powers entire KAI system. Nylon braided cable sleeving for organization. LD33CV steps down to 3.3V for ESP32 logic.' },
   { id: 'relay',    pos: [-0.55, 0.3, 0.3]as[number,number,number],col: 0xFF006E, color: '#FF006E', title: '5V RELAY MODULE',       info: '5V single-channel relay on GPIO 26. Opto-isolated — ESP32 signal switches up to 10A/250VAC external circuit. Toggled via Blynk V-pin in Manual mode. Future: fan/LED strip control.' },
-  { id: 'ld33cv',   pos: [-0.3, -0.2, -0.4]as[number,number,number],col:0x3a86ff,color:'#3a86ff', title: 'LD33CV REGULATOR',      info: 'LD33CV linear voltage regulator: 7.4V → 3.3V. Powers ESP32-S3, BME280, MPU6050, LDR voltage divider. TO-252 package. Max 1A output. Clean rail for sensitive I2C/SPI logic.' },
+  { id: 'ld33cv',   pos: [-0.3, -0.2, -0.4]as[number,number,number],col:0x3a86ff,color:'#3a86ff', title: 'LD33CV REGULATOR',      info: 'LD33CV linear voltage regulator: 7.4V → 3.3V. Powers ESP32, BME280, MPU6050, LDR voltage divider. TO-252 package. Max 1A output. Clean rail for sensitive I2C/SPI logic.' },
 ];
 
 // ── Box definitions for 3D stencil model ──────────────────────────────────
@@ -68,7 +68,7 @@ function getKaiBoxes(): Record<string, { home:[number,number,number]; boxes:BoxD
       { x:0,y:-0.05,z:0.05, w:0.1,h:0.06,d:0.06, col:0x333333 }, // Crystal osc
     ]},
 
-    // ── MCU BOARD (ESP32-S3) ────────────────────────────────────────────────
+    // ── MCU BOARD (ESP32) ────────────────────────────────────────────────
     esp32s3: { home:[0, 0.15, 0], boxes:[
       { x:0,y:0,z:0,  w:0.9,h:0.04,d:0.6, col:0x0d2210 }, // PCB Main
       { x:0,y:0.05,z:-0.1, w:0.4,h:0.06,d:0.45, col:0x333333, em:0x00d4ff, ei:0.2 }, // Metal shield
