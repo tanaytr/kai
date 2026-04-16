@@ -18,10 +18,12 @@ export default function ExperienceEngine({ onBack }: ExperienceEngineProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [phase, setPhase] = useState<KAIState>('IDLE');
   const [showHelp, setShowHelp] = useState(true);
-  const [simValues, setSimValues] = useState({ distance: 100, gas: 400, light: 100, temp: 27.5 });
+  const [simValues, setSimValues] = useState({ distance: 100, gas: 400, light: 100, temp: 26.5, humidity: 45, tiltX: 0, tiltY: 0 });
   const [isSummoned, setIsSummoned] = useState(false);
   const [isGasActive, setIsGasActive] = useState(false);
   const [isNight, setIsNight] = useState(false);
+  const [isTilted, setIsTilted] = useState(false);
+  const [isClimateStressed, setIsClimateStressed] = useState(false);
   const [logs, setLogs] = useState<string[]>(['KAI SYSTEM INITIALIZED', 'WAITING FOR SIMULATION INPUT...']);
   
   const rootGroup      = useRef<any>(null);
@@ -66,24 +68,23 @@ export default function ExperienceEngine({ onBack }: ExperienceEngineProps) {
     renderer.setSize(canvasRef.current.clientWidth, canvasRef.current.clientHeight);
     rendererRef.current = renderer;
 
-    const ambient = new THREE.AmbientLight(0xffffff, 0.8);
+    const ambient = new THREE.AmbientLight(0xffffff, 0.4);
     scene.add(ambient);
     
     // Hemisphere light for better overall visibility
-    const hemi = new THREE.HemisphereLight(0xffffff, 0x444444, 1.2);
+    const hemi = new THREE.HemisphereLight(0xffffff, 0x444444, 0.6);
     scene.add(hemi);
 
-    const sun = new THREE.DirectionalLight(0xffffff, 2.0);
+    const sun = new THREE.DirectionalLight(0xffffff, 1.2);
     sun.position.set(5, 10, 5);
     scene.add(sun);
 
-    const spotlight = new THREE.SpotLight(0xffffff, 40);
+    const spotlight = new THREE.SpotLight(0xffffff, 20);
     spotlight.position.set(2, 5, 2);
-    spotlight.castShadow = true;
     scene.add(spotlight);
 
     // KAI-specific point light to ensure visibility
-    const point = new THREE.PointLight(COLORS.accent, 5, 10);
+    const point = new THREE.PointLight(COLORS.accent, 2, 8);
     point.position.set(0, 1, 1);
     scene.add(point);
 
@@ -104,9 +105,9 @@ export default function ExperienceEngine({ onBack }: ExperienceEngineProps) {
 
     // Chassis (Body)
     const chassisMat = new THREE.MeshStandardMaterial({ 
-      color: 0x222222, // Lightened from 0x111111 for better visibility
+      color: 0x111111, 
       roughness: 0.15, 
-      metalness: 0.4 // Lower metalness for better visibility without environment map
+      metalness: 0.4 
     });
     const body = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.4, 0.6), chassisMat);
     body.position.y = 0;
@@ -143,6 +144,14 @@ export default function ExperienceEngine({ onBack }: ExperienceEngineProps) {
     facePlane.position.set(0, 0, 0.28);
     faceMesh.current = facePlane;
     head.add(facePlane);
+
+    // Screen Glass Cover
+    const glass = new THREE.Mesh(
+      new THREE.CircleGeometry(0.3, 32),
+      new THREE.MeshStandardMaterial({ color: 0x000000, metalness: 1.0, roughness: 0.1, transparent: true, opacity: 0.4 })
+    );
+    glass.position.set(0, 0, 0.29);
+    head.add(glass);
 
     const visor = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.1, 0.15), new THREE.MeshStandardMaterial({ color: 0x444444, metalness: 0.8 }));
     visor.position.set(0, -0.1, 0.3);
@@ -182,9 +191,20 @@ export default function ExperienceEngine({ onBack }: ExperienceEngineProps) {
       if (faceMesh.current) {
         const pulse = Math.abs(Math.sin(t * 3)) * 0.3;
         faceMesh.current.material.emissiveIntensity = 0.5 + pulse;
-        if (phase === 'ALERT') faceMesh.current.material.emissive.set(COLORS.alert);
+        if (phase === 'ALERT') {
+          faceMesh.current.material.emissive.set(COLORS.alert);
+          addLog("DANGER: CRITICAL VENTILATION REQUIRED");
+        }
         else if (phase === 'DROWSY') faceMesh.current.material.emissive.set(COLORS.info);
         else faceMesh.current.material.emissive.set(COLORS.accent);
+
+        if (isTilted) {
+          rootGroup.current.rotation.z = Math.sin(t * 10) * 0.1; // Shake effect
+          rootGroup.current.rotation.x = Math.cos(t * 10) * 0.1;
+        } else {
+          rootGroup.current.rotation.z *= 0.9;
+          rootGroup.current.rotation.x *= 0.9;
+        }
       }
     }
 
@@ -233,6 +253,20 @@ export default function ExperienceEngine({ onBack }: ExperienceEngineProps) {
     addLog(active ? "AMBIENT LIGHT DIMMED → LDR < 20" : "LIGHT RESTORED → LDR NORMALIZED");
   };
 
+  const toggleTilt = () => {
+    const active = !isTilted;
+    setIsTilted(active);
+    setSimValues(v => ({ ...v, tiltX: active ? 45 : 0, tiltY: active ? -20 : 0 }));
+    addLog(active ? "PHYSICAL SHAKE DETECTED → MPU6050 INTERRUPT" : "SYSTEM STABILIZED → IMU NORMALIZED");
+  };
+
+  const toggleClimate = () => {
+    const active = !isClimateStressed;
+    setIsClimateStressed(active);
+    setSimValues(v => ({ ...v, temp: active ? 34.5 : 26.5, humidity: active ? 85 : 45 }));
+    addLog(active ? "ENVIRONMENTAL STRESS → BME280 THRESHOLD" : "CLIMATE STABILIZED");
+  };
+
   return (
     <div style={{ position: 'fixed', inset: 0, background: COLORS.bg, color: 'white', fontFamily: "'JetBrains Mono', monospace", display: 'flex' }}>
       {/* 3D Viewport */}
@@ -240,32 +274,37 @@ export default function ExperienceEngine({ onBack }: ExperienceEngineProps) {
 
       {/* Diagnostics HUD (Right Panel) */}
       <div style={{ 
+        position: 'fixed',
+        right: 0,
+        top: 0,
+        bottom: 0,
         width: '320px', 
-        background: 'rgba(0,4,18,0.95)', 
+        background: 'rgba(0,4,18,0.98)', 
         borderLeft: '2px solid rgba(0,212,255,0.15)', 
         display: 'flex', 
         flexDirection: 'column', 
         padding: 20, 
         zIndex: 100, 
-        overflow: 'hidden',
-        height: '100%'
+        overflowY: 'auto'
       }}>
         <div style={{ borderBottom: '1px solid rgba(0,212,255,0.2)', paddingBottom: 15, marginBottom: 20 }}>
           <div style={{ fontFamily: "'Press Start 2P', cursive", fontSize: '0.6rem', color: COLORS.accent, marginBottom: 8 }}>DIAGNOSTICS HUD</div>
           <div style={{ fontSize: '0.55rem', color: 'rgba(255,255,255,0.4)' }}>PHASE 4: DIGITAL TWIN SIMULATOR</div>
         </div>
 
-        {/* Telemetry */}
+        {/* Telemetry Grid (5 Sensors) */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 25 }}>
           {[
-            { label: 'DIST', val: `${simValues.distance}cm`, color: simValues.distance < 40 ? COLORS.warning : COLORS.accent },
-            { label: 'GAS', val: `${simValues.gas} ADC`, color: simValues.gas > 2500 ? COLORS.alert : COLORS.accent },
-            { label: 'LIGHT', val: `${simValues.light}%`, color: simValues.light < 20 ? COLORS.info : COLORS.accent },
-            { label: 'TEMP', val: `${simValues.temp}°C`, color: COLORS.accent }
+            { label: 'DIST (HC-SR04)', val: `${simValues.distance}cm`, color: simValues.distance < 40 ? COLORS.warning : COLORS.accent },
+            { label: 'GAS (MQ-2)', val: `${simValues.gas} ADC`, color: simValues.gas > 2500 ? COLORS.alert : COLORS.accent },
+            { label: 'LIGHT (LDR)', val: `${simValues.light}%`, color: simValues.light < 20 ? COLORS.info : COLORS.accent },
+            { label: 'TEMP (BME280)', val: `${simValues.temp}°C`, color: simValues.temp > 30 ? COLORS.warning : COLORS.accent },
+            { label: 'HUMIDITY (BME)', val: `${simValues.humidity}%`, color: COLORS.accent },
+            { label: 'TILT (MPU6050)', val: `${simValues.tiltX}°`, color: isTilted ? COLORS.alert : COLORS.accent }
           ].map((t, i) => (
             <div key={i} style={{ border: `1px solid ${t.color}33`, padding: '10px 15px', background: 'rgba(0,0,0,0.4)', borderRadius: 4 }}>
-              <div style={{ fontSize: '0.45rem', color: 'rgba(255,255,255,0.5)', marginBottom: 4 }}>{t.label}</div>
-              <div style={{ fontSize: '0.85rem', color: t.color, fontWeight: 'bold' }}>{t.val}</div>
+              <div style={{ fontSize: '0.4rem', color: 'rgba(255,255,255,0.5)', marginBottom: 4 }}>{t.label}</div>
+              <div style={{ fontSize: '0.75rem', color: t.color, fontWeight: 'bold' }}>{t.val}</div>
             </div>
           ))}
         </div>
@@ -281,6 +320,7 @@ export default function ExperienceEngine({ onBack }: ExperienceEngineProps) {
               { p: 'G13', active: isSummoned, label: 'MOT_R' },
               { p: 'G25', active: phase === 'ALERT', label: 'BUZZ' },
               { p: 'G04', active: phase !== 'IDLE', label: 'SERVO' },
+              { p: 'G26', active: isClimateStressed, label: 'RELAY' },
               { p: 'G18', active: true, label: 'ECHO' }
             ].map((p, i) => (
               <div key={i} style={{ border: `1px solid ${p.active ? COLORS.accent : 'rgba(255,255,255,0.1)'}`, padding: '4px 6px', borderRadius: 2, fontSize: '0.38rem', color: p.active ? COLORS.accent : 'rgba(255,255,255,0.3)', background: p.active ? `${COLORS.accent}11` : 'none' }}>
@@ -305,9 +345,9 @@ export default function ExperienceEngine({ onBack }: ExperienceEngineProps) {
         </div>
       </div>
 
-      {/* Control Tools (Left Panel) */}
-      <div style={{ position: 'fixed', left: 20, top: 120, display: 'flex', flexDirection: 'column', gap: 15, zIndex: 150 }}>
-        <button onClick={triggerSummon} disabled={isSummoned} style={{ width: 44, height: 44, borderRadius: '50%', background: isSummoned ? 'rgba(0,0,0,0.5)' : '#3A86FF', border: 'none', color: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 15px rgba(58,134,255,0.4)' }} title="Summon KAI">
+      {/* Control Tools (6 Interactive Tests) */}
+      <div style={{ position: 'fixed', left: 20, top: 100, display: 'flex', flexDirection: 'column', gap: 12, zIndex: 150 }}>
+        <button onClick={triggerSummon} disabled={isSummoned} style={{ width: 44, height: 44, borderRadius: '50%', background: isSummoned ? 'rgba(0,0,0,0.5)' : '#3A86FF', border: 'none', color: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }} title="Test HC-SR04 Sonar">
           <Radio size={20} />
         </button>
         <button onClick={toggleGas} style={{ width: 44, height: 44, borderRadius: '50%', background: isGasActive ? COLORS.alert : 'rgba(255,255,255,0.1)', border: 'none', color: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }} title="Test MQ-2 Gas">
@@ -316,13 +356,19 @@ export default function ExperienceEngine({ onBack }: ExperienceEngineProps) {
         <button onClick={toggleNight} style={{ width: 44, height: 44, borderRadius: '50%', background: isNight ? '#8338EC' : 'rgba(255,255,255,0.1)', border: 'none', color: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }} title="Test LDR Light">
           {isNight ? <Moon size={20} /> : <Sun size={20} />}
         </button>
-        <button onClick={() => setSimValues({ distance: 100, gas: 400, light: 100, temp: 27.5 })} style={{ width: 44, height: 44, borderRadius: '50%', background: 'rgba(255,255,255,0.1)', border: 'none', color: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }} title="Reset Simulation">
+        <button onClick={toggleTilt} style={{ width: 44, height: 44, borderRadius: '50%', background: isTilted ? COLORS.warning : 'rgba(255,255,255,0.1)', border: 'none', color: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }} title="Test MPU6050 Shake">
+          <Activity size={20} />
+        </button>
+        <button onClick={toggleClimate} style={{ width: 44, height: 44, borderRadius: '50%', background: isClimateStressed ? COLORS.info : 'rgba(255,255,255,0.1)', border: 'none', color: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }} title="Test BME280 Climate">
+          <Settings size={20} />
+        </button>
+        <button onClick={() => { setIsTilted(false); setIsClimateStressed(false); setIsSummoned(false); setIsGasActive(false); setIsNight(false); setSimValues({ distance: 100, gas: 400, light: 100, temp: 26.5, humidity: 45, tiltX: 0, tiltY: 0 }); }} style={{ width: 44, height: 44, borderRadius: '50%', background: 'rgba(255,255,255,0.1)', border: 'none', color: 'white', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }} title="Reset All Sensors">
           <RefreshCw size={20} />
         </button>
       </div>
 
-      {/* Persistent Help HUD */}
-      <div style={{ position: 'fixed', bottom: 30, right: 350, background: 'rgba(0,4,18,0.9)', border: `1px solid ${COLORS.accent}`, padding: '12px 20px', borderRadius: 8, zIndex: 100, maxWidth: 300 }}>
+      {/* Persistent Help HUD (Floating left of Sidebar) */}
+      <div style={{ position: 'fixed', bottom: 30, right: 340, background: 'rgba(0,4,18,0.9)', border: `1px solid ${COLORS.accent}`, padding: '12px 20px', borderRadius: 8, zIndex: 100, maxWidth: 280 }}>
         <div style={{ fontFamily: "'Press Start 2P', cursive", fontSize: '0.45rem', color: COLORS.accent, marginBottom: 8 }}>VIRTUAL TEST GUIDE</div>
         <div style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.8)', lineHeight: 1.5 }}>
           {phase === 'IDLE' && "KAI is in Idle. Try using the Summon button (Left) to move it or ignite the Matchstick (MQ-2) to test safety logic."}

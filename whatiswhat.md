@@ -45,9 +45,11 @@ Actuators allow KAI to "react" physically.
 3.  **N20 Geared Motors (Wheel Drive)**:
     - **Function**: High-torque mini motors that allow KAI to roll. Geared down for precision and power.
 4.  **L298N (Motor Driver)**:
-    - **Function**: Bridges the gap between the weak brain (ESP32) and the strong batteries. It provides the high current needed to spin the wheels.
-5.  **Piezo Buzzer**:
-    - **Function**: The alarm speaker. It creates sound through vibration when an electrical signal is applied.
+    - **Function**: Bridges the gap between the weak brain (ESP32) and the strong batteries. It allows the ESP32 to spin the wheels.
+5.  **5V Relay Module**:
+    - **Function**: An electromagnetic switch that allows KAI to control high-power external devices (like a cooling fan or a bigger lamp) safely. It fulfills the "Control Actuator" cloud requirement.
+6.  **Piezo Buzzer**:
+    - **Function**: The alarm speaker. It sounds whenever the MQ-2 sensor detects gas.
 
 ---
 
@@ -72,3 +74,12 @@ If the project feels too complex, follow this "Dumbed Down" architecture while k
     - Use static images or text labels on the circular screen instead of complex procedural eye animations. Use the `Adafruit_GFX` library functions (`drawCircle`, `printText`) for speed.
 4.  **Hardware "Modular" Wiring**:
     - Use a **General Purpose PCB** (Zero Board) instead of breadboards. Solder "female headers" for every sensor so you can plug them in and out for testing without worrying about loose jumper wires.
+
+---
+
+## ☁️ CLOUD WORKFLOW (The "Blynk" Solution)
+For the Viva requirement of "Cloud Based Workflow" (Data logging + Control):
+
+1.  **Data Logging**: In the Blynk App, create a **SuperChart** widget. Direct the ESP32 to push sensor data (Temp, Gas, Distance) every 5 seconds. This creates a cloud-based history of KAI's environment.
+2.  **Remote Control**: Add a **Button Widget** in the Blynk App. When pressed, it sends a signal to the ESP32 to flip the **5V Relay** or tilt the **Servo**. This fulfills the "Control Actuator from Cloud" requirement.
+3.  **Real-time Alerts**: Use the Blynk **Notification** widget to send a push notification to your phone whenever the MQ-2 sensor detects smoke.
