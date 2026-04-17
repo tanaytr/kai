@@ -325,11 +325,11 @@ export default function PresentationEngine({ onBack }: PresentationEngineProps) 
 
   const handleGesture = useCallback((gesture: GestureState) => {
     setGestureState(gesture);
-    if (gesture.type === 'open') navigate(1);
-    else if (gesture.type === 'fist') navigate(-1);
-    else if (gesture.type === 'index') {
-      if (gesture.direction === 'left') navigate(1);
-      else if (gesture.direction === 'right') navigate(-1);
+    // Simplified machine gestures for stability
+    if (gesture.type === 'open') {
+      navigate(1);
+    } else if (gesture.type === 'fist') {
+      navigate(-1);
     }
   }, [navigate]);
 

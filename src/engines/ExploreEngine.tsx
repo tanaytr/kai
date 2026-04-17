@@ -191,6 +191,7 @@ export default function ExploreEngine({ onBack }: ExploreEngineProps) {
   const [gestureEnabled, setGestureEnabled] = useState(false);
   const [gestureLog, setGestureLog]         = useState('✊ FIST + OPEN = BLAST  ·  CLICK HOTSPOT FOR INFO');
   const [selectedPart, setSelectedPart]     = useState<typeof KAI_PARTS[0] | null>(null);
+  const [hasBlasted, setHasBlasted]         = useState(false);
   const [isListening, setIsListening]       = useState(false);
   const [isTalking, setIsTalking]           = useState(false);
   const [transcript, setTranscript]         = useState('');
@@ -634,6 +635,7 @@ export default function ExploreEngine({ onBack }: ExploreEngineProps) {
       }
     }
 
+    if (!hasBlasted) return; // LOCK ROTATION UNTIL BLASTED
     const dx = e.clientX - camDrag.current.lx, dy = e.clientY - camDrag.current.ly;
     if (pointerDownAt.current && (Math.abs(dx) > 1 || Math.abs(dy) > 1)) { 
       camDrag.current.on = true; 
@@ -674,6 +676,7 @@ export default function ExploreEngine({ onBack }: ExploreEngineProps) {
 
     // Index rotation
     if (g.type === 'index') {
+      if (!hasBlasted) { setGestureLog('🚫 PROTOCOL ERROR: BLAST REQUIRED'); return; }
       const vx = g.velX ?? 0, vy = g.velY ?? 0;
       if (Math.abs(vx) > 0.001 || Math.abs(vy) > 0.001) {
         setGestureLog('☝ Index Ptr → Rotating…');
@@ -699,7 +702,9 @@ export default function ExploreEngine({ onBack }: ExploreEngineProps) {
 
     if (g.type === 'open') {
       if (g.blastFired && (phaseRef.current === 'assembled' || phaseRef.current === 'done')) {
-        setGestureLog('💥 BLASTING…'); triggerBlast();
+        setGestureLog('💥 BLASTING… SECURITY BYPASSED'); 
+        setHasBlasted(true);
+        triggerBlast();
       } else if (phaseRef.current === 'exploded' && pinchSelectedIndex !== -1) {
         const ids = orderedIds.current;
         const selectedId = ids[pinchSelectedIndex % ids.length];
@@ -708,6 +713,7 @@ export default function ExploreEngine({ onBack }: ExploreEngineProps) {
         partTarget.current.set(selectedId, home);
         musicEngine.playSfx(1000);
       } else {
+        if (!hasBlasted) { setGestureLog('🚫 PROTOCOL ERROR: BLAST REQUIRED'); return; }
         setGestureLog('✋ Open → Zooming IN');
         nudgeZoom(-0.5);
       }
@@ -715,12 +721,23 @@ export default function ExploreEngine({ onBack }: ExploreEngineProps) {
     }
 
     if (g.type === 'fist') {
+      if (!hasBlasted) { setGestureLog('✊ HOLD FIST ➔ ✋ OPEN TO BLAST'); return; }
       setGestureLog('✊ Fist → Zooming OUT');
       nudgeZoom(0.5);
       return;
     }
 
-    setGestureLog('☝ Rotate · 🤏 Pinch (Select) · ✋ Open (Push Home) · ✊ Fist (Zoom Out)');
+    if (g.type === 'peace') {
+      setGestureLog('✌️ REASSEMBLE COMMAND (SNAP)');
+      triggerAssemble();
+      return;
+    }
+
+    if (!hasBlasted) {
+      setGestureLog('✊ HOLD FIST ➔ ✋ OPEN PALM TO BLAST & UNLOCK');
+    } else {
+      setGestureLog('☝ Rotate · 🤏 Pinch (Select) · ✋ Open (Push Home) · ✊ Fist (Zoom Out) · ✌️ Snap');
+    }
   }, [triggerBlast, triggerAssemble, nudgeZoom, pinchSelectedIndex]);
 
   useEffect(() => { if(gestureEnabled){ gestureController.subscribe(handleGesture); return()=>gestureController.unsubscribe(handleGesture); } else { setHandPtr(null); } }, [gestureEnabled, handleGesture]);

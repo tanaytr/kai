@@ -244,10 +244,14 @@ export default function ExperienceEngine({ onBack }: ExperienceEngineProps) {
     const texture = new THREE.CanvasTexture(canvas);
     faceTexture.current = texture;
 
-    const faceMat = new THREE.MeshBasicMaterial({ 
+    // UPGRADE: MeshStandardMaterial + Emissive for a glowing screen
+    const faceMat = new THREE.MeshStandardMaterial({ 
       map: texture,
+      emissiveMap: texture,
+      emissive: new THREE.Color(0xffffff),
+      emissiveIntensity: 1.2,
       transparent: true,
-      opacity: 0.9
+      opacity: 1.0
     });
     const facePlane = new THREE.Mesh(faceGeom, faceMat);
     faceMesh.current = facePlane;
@@ -268,7 +272,14 @@ export default function ExperienceEngine({ onBack }: ExperienceEngineProps) {
 
     const glass = new THREE.Mesh(
       new THREE.CircleGeometry(0.3, 32),
-      new THREE.MeshStandardMaterial({ color: 0x000000, metalness: 1.0, roughness: 0.1, transparent: true, opacity: 0.25 })
+      new THREE.MeshStandardMaterial({ 
+        color: 0x88ccff, 
+        metalness: 0.9, 
+        roughness: 0.1, 
+        transparent: true, 
+        opacity: 0.12, // MUCH MORE TRANSPARENT
+        side: THREE.DoubleSide
+      })
     );
     glass.position.set(0, 0, 0.3);
     head.add(glass);
@@ -359,6 +370,28 @@ export default function ExperienceEngine({ onBack }: ExperienceEngineProps) {
       ctx.beginPath(); ctx.arc(156+scanOffset, 128, 20, 0, Math.PI, true); ctx.stroke();
     }
 
+    // 4. Multi-Sensor Telemetry Text (Truthful Hardware Data)
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = eyeColor;
+    ctx.font = 'bold 22px "JetBrains Mono", monospace';
+    ctx.textAlign = 'center';
+    
+    let statusText = "SYSTEM OK";
+    if (phase === 'ALERT') statusText = "MQ-2 ALERT!";
+    else if (isOverheating) statusText = "TEMP CRITICAL";
+    else if (isSleepy) statusText = "DROWSY MODE";
+    else if (phase === 'ENGAGED') statusText = "TARGET ACQUIRED";
+
+    ctx.fillText(statusText, 128, 50);
+
+    // Mini Sensor Dashboard on Face (Enlarged for legibility)
+    ctx.font = 'bold 15px "JetBrains Mono", monospace';
+    ctx.globalAlpha = 0.85;
+    ctx.fillText(`DIST: ${sim.distance}cm`, 128, 205);
+    ctx.fillText(`GAS: ${sim.gas}   LDR: ${sim.light}%`, 128, 225);
+    ctx.fillText(`TEMP: ${sim.temp}°C`, 128, 245);
+    ctx.globalAlpha = 1.0;
+
     faceTexture.current.needsUpdate = true;
   };
 
@@ -371,7 +404,8 @@ export default function ExperienceEngine({ onBack }: ExperienceEngineProps) {
 
     if (rootGroup.current && headGroup.current) {
       const sim = simRef.current;
-      const phase = getPhase(); // This now uses simRef internally
+      const phase = getPhase();
+      phaseRef.current = phase; // CRITICAL SYNC FIX
       const prevZ = currentZ.current;
       currentZ.current += (targetZ.current - currentZ.current) * 0.04;
       rootGroup.current.position.z = currentZ.current;
