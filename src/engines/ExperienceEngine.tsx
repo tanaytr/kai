@@ -228,6 +228,7 @@ export default function ExperienceEngine({ onBack }: ExperienceEngineProps) {
   };
 
   const drawFace = (t: number) => {
+    if (!faceCanvas.current || !faceTexture.current) return;
     const ctx = faceCanvas.current.getContext('2d');
     if (!ctx) return;
 
