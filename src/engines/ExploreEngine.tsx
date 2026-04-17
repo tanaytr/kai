@@ -191,6 +191,10 @@ export default function ExploreEngine({ onBack }: ExploreEngineProps) {
   const [gestureEnabled, setGestureEnabled] = useState(false);
   const [gestureLog, setGestureLog]         = useState('✊ FIST + OPEN = BLAST  ·  CLICK HOTSPOT FOR INFO');
   const [selectedPart, setSelectedPart]     = useState<typeof KAI_PARTS[0] | null>(null);
+  const [isListening, setIsListening]       = useState(false);
+  const [isTalking, setIsTalking]           = useState(false);
+  const [transcript, setTranscript]         = useState('');
+  const [lastResponse, setLastResponse]     = useState('');
   const [hotspotScreenPos, setHotspotScreenPos] = useState<{x:number;y:number}|null>(null);
   const [showSuccess, setShowSuccess]       = useState(false);
   const [handGesture, setHandGesture]       = useState<string>('none');
@@ -204,6 +208,8 @@ export default function ExploreEngine({ onBack }: ExploreEngineProps) {
   const [showHelp, setShowHelp]             = useState(false);
 
   const canvasRef   = useRef<HTMLCanvasElement>(null);
+  const faceCanvas  = useRef<HTMLCanvasElement>(null);
+  const faceTexture = useRef<any>(null);
   const sceneRef    = useRef<any>(null);
   const cameraRef   = useRef<any>(null);
   const rendererRef = useRef<any>(null);
@@ -262,7 +268,80 @@ export default function ExploreEngine({ onBack }: ExploreEngineProps) {
     });
     raycaster.current = new THREE.Raycaster();
     mouse3D.current   = new THREE.Vector2();
-  }, []);
+  }, [projectToScreen]);
+
+  // ── Neural AI Chat Logic (Synced with Experience Engine) ───────────────────
+
+  const handleQuery = (query: string) => {
+    const q = query.toLowerCase();
+    let response = "I am KAI. How can I assist with your NMIMS project?";
+    if (q.includes("name")) response = "My name is KAI. I am an architectural synthesis developed for COA studies.";
+    else if (q.includes("prof") || q.includes("gautam")) response = "This project is submmited to Dr. Divya Gautam at NMIMS.";
+    else if (q.includes("team") || q.includes("who made")) response = "KAI was created by Srishti Jain, Diksha Rathi, and Tanay Trivedi.";
+    else if (q.includes("city")) response = "I am stationed at the SVKM NMIMS Mumbai campus.";
+    else if (q.includes("hello") || q.includes("hi")) response = "Neural link established. Systems nominal.";
+
+    setLastResponse(response);
+    speak(response);
+  };
+
+  const speak = (text: string) => {
+    if (!window.speechSynthesis) return;
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.pitch = 0.8;
+    utterance.rate = 1.1;
+    utterance.onstart = () => setIsTalking(true);
+    utterance.onend = () => setIsTalking(false);
+    window.speechSynthesis.speak(utterance);
+  };
+
+  const startListening = () => {
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognition) return;
+    const recognition = new SpeechRecognition();
+    recognition.lang = 'en-US';
+    recognition.onstart = () => { setIsListening(true); setTranscript('Listening...'); };
+    recognition.onresult = (event: any) => {
+      const msg = event.results[0][0].transcript;
+      setTranscript(msg);
+      handleQuery(msg);
+    };
+    recognition.onend = () => setIsListening(false);
+    recognition.start();
+  };
+
+  const drawFace = (t: number) => {
+    if (!faceCanvas.current || !faceTexture.current) return;
+    const ctx = faceCanvas.current.getContext('2d');
+    if (!ctx) return;
+
+    ctx.fillStyle = '#000000';
+    ctx.fillRect(0, 0, 256, 256);
+
+    ctx.lineWidth = 14;
+    ctx.lineCap = 'round';
+    ctx.strokeStyle = '#06FFA5';
+    ctx.shadowBlur = 15;
+    ctx.shadowColor = '#06FFA5';
+
+    if (isTalking) {
+      ctx.beginPath();
+      ctx.lineWidth = 6;
+      for(let i=0; i<80; i+=5) {
+        const h = Math.sin(t * 30 + i) * 30;
+        ctx.moveTo(88+i, 180-h/2); ctx.lineTo(88+i, 180+h/2);
+      }
+      ctx.stroke();
+    }
+
+    // Idle Scanning Arcs (Truthful Primitives)
+    const scanOffset = Math.sin(t*2)*10;
+    ctx.beginPath(); ctx.arc(100+scanOffset, 128, 20, 0, Math.PI, true); ctx.stroke();
+    ctx.beginPath(); ctx.arc(156+scanOffset, 128, 20, 0, Math.PI, true); ctx.stroke();
+
+    faceTexture.current.needsUpdate = true;
+  };
 
   const buildKai = useCallback(() => {
     if (!rootGroup.current || !window.THREE) return;
@@ -277,18 +356,31 @@ export default function ExploreEngine({ onBack }: ExploreEngineProps) {
     Object.entries(getKaiBoxes()).forEach(([id, { home, boxes }]) => {
       const pg = new THREE.Group(); pg.userData.partId = id;
       boxes.forEach(b => {
-        const p: any = { color: b.col, roughness: 0.6, metalness: 0.4 };
-        if (b.em !== undefined) { 
-          p.emissive = new THREE.Color(b.em); 
-          p.emissiveIntensity = b.ei ?? 0.2; 
+        let mat;
+        if (id === 'gc9a01' && b.shape === 'circle') {
+          const canvas = document.createElement('canvas');
+          canvas.width = 256; canvas.height = 256;
+          faceCanvas.current = canvas;
+          const texture = new THREE.CanvasTexture(canvas);
+          faceTexture.current = texture;
+          mat = new THREE.MeshBasicMaterial({ map: texture, transparent: true, opacity: 0.9 });
+        } else {
+          mat = new THREE.MeshStandardMaterial({ 
+            color: b.col, 
+            roughness: 0.6, 
+            metalness: 0.4,
+            emissive: b.em !== undefined ? new THREE.Color(b.em) : undefined,
+            emissiveIntensity: b.ei ?? 0.2
+          });
         }
+        
         let geom;
         if (b.shape === 'sphere') geom = new THREE.SphereGeometry(b.w, 32, 24);
         else if (b.shape === 'cylinder') geom = new THREE.CylinderGeometry(b.w, b.h, b.d, 32);
         else if (b.shape === 'circle') geom = new THREE.CircleGeometry(b.w, 32);
         else geom = new THREE.BoxGeometry(b.w, b.h, b.d);
         
-        const m = new THREE.Mesh(geom, new THREE.MeshStandardMaterial(p));
+        const m = new THREE.Mesh(geom, mat);
         m.userData.baseEI = b.ei ?? 0.2;
         m.position.set(b.x, b.y, b.z);
         if (b.rx) m.rotation.x = b.rx;
@@ -299,6 +391,13 @@ export default function ExploreEngine({ onBack }: ExploreEngineProps) {
       pg.position.set(home[0], home[1], home[2]); root.add(pg);
       partGroup.current.set(id, pg); partTarget.current.set(id, [home[0], home[1], home[2]]);
     });
+    
+    // Virtual I2S Markers
+    const micMark = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.02, 16), new THREE.MeshStandardMaterial({ color: 0x06FFA5, emissive: 0x06FFA5, emissiveIntensity: 1.0 }));
+    micMark.position.set(0.15, 0.55, 0.8); micMark.rotation.x = Math.PI/2; root.add(micMark);
+    
+    const speakerMark = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.08, 0.02), new THREE.MeshStandardMaterial({ color: 0x333333 }));
+    speakerMark.position.set(-0.15, 0.5, 0.82); speakerMark.rotation.x = Math.PI/2; root.add(speakerMark);
   }, []);
 
   const startLoopRef = useRef<() => void>(() => {});
@@ -311,6 +410,11 @@ export default function ExploreEngine({ onBack }: ExploreEngineProps) {
       const { theta, phi } = rotRef.current; const r = curZoom.current;
       cameraRef.current.position.set(r*Math.sin(phi)*Math.sin(theta), r*Math.cos(phi), r*Math.sin(phi)*Math.cos(theta));
       cameraRef.current.lookAt(0,0,0);
+      
+      // Face Animation
+      if (faceCanvas.current && faceTexture.current) {
+        drawFace(performance.now() * 0.001);
+      }
       // Animate hotspots
       const t = Date.now() * 0.001;
       hotspotsRef.current.forEach((h, i) => {
@@ -738,6 +842,17 @@ export default function ExploreEngine({ onBack }: ExploreEngineProps) {
           </div>
         </div>
       )}
+
+      {/* Neural AI Interface Overlay */}
+      <div style={{ position:'fixed', bottom:100, left:20, zIndex:200, width:300, background:'rgba(5,5,16,0.9)', border:'1px solid #06FFA5', padding:15, borderRadius:8 }}>
+        <div style={{ fontFamily:"'Press Start 2P',cursive", fontSize:'0.45rem', color:'#06FFA5', marginBottom:10 }}>NEURAL AI STATUS</div>
+        <div style={{ display:'flex', gap:10, alignItems:'center', marginBottom:12 }}>
+          <button onClick={startListening} style={{ background:isListening?'#FF006E':'#06FFA5', border:'none', borderRadius:'50%', width:30, height:30, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center' }}><Radio size={16}/></button>
+          <div style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:'0.5rem', color:isListening?'#FF006E':'#06FFA5' }}>{isListening?'LISTENING…':'VOICE READY (NMIMS DB)'}</div>
+        </div>
+        {transcript && <div style={{ fontSize:'0.65rem', color:'#06FFA5', marginBottom:8 }}>YOU: "{transcript}"</div>}
+        {lastResponse && <div style={{ fontSize:'0.65rem', color:'#fff', paddingLeft:8, borderLeft:'2px solid #06FFA5' }}>KAI: {lastResponse}</div>}
+      </div>
 
       {/* Gesture log bar */}
       {gestureEnabled && (

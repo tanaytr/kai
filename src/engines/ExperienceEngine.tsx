@@ -27,6 +27,12 @@ export default function ExperienceEngine({ onBack }: ExperienceEngineProps) {
   const [isRelayOn, setIsRelayOn]   = useState(false);
   const [logs, setLogs]             = useState<string[]>(['KAI SYSTEM INITIALIZED', 'WAITING FOR SIMULATION INPUT...']);
   
+  // AI Chat State
+  const [isListening, setIsListening] = useState(false);
+  const [isTalking, setIsTalking]     = useState(false);
+  const [transcript, setTranscript]   = useState('');
+  const [lastResponse, setLastResponse] = useState('');
+  
   const rootGroup      = useRef<any>(null);
   const headGroup      = useRef<any>(null);
   const faceMesh       = useRef<any>(null);
@@ -65,6 +71,55 @@ export default function ExperienceEngine({ onBack }: ExperienceEngineProps) {
   const triggerBuzzer = () => {
     addLog("BUZZER GPIO 25 TRIGGERED");
     musicEngine.playSfx(1000);
+  };
+
+  // ── Neural AI Chat Logic ───────────────────────────────────────────────────
+
+  const handleQuery = (query: string) => {
+    const q = query.toLowerCase();
+    let response = "I am KAI, your Kinetic Artificial Intelligence. How can I assist with your COA project?";
+
+    if (q.includes("name")) response = "My name is KAI. I was developed as a high-fidelity Digital Twin for this architecture study.";
+    else if (q.includes("prof") || q.includes("gautam")) response = "This project is submitted to Dr. Divya Gautam, Assistant Professor at STME.";
+    else if (q.includes("uni") || q.includes("nmims")) response = "I am part of the COA case study for SVKM's NMIMS University.";
+    else if (q.includes("team") || q.includes("creators") || q.includes("who made")) response = "I was created by Srishti Jain, Diksha Rathi, and Tanay Trivedi.";
+    else if (q.includes("course") || q.includes("subject")) response = "This project falls under Computer Organisation and Architecture.";
+    else if (q.includes("city")) response = "I am stationed at the SVKM NMIMS Mumbai campus neural lab.";
+    else if (q.includes("hello") || q.includes("hi")) response = "Greetings. Biological presence detected. Systems are nominal.";
+
+    setLastResponse(response);
+    addLog(`AI RESPONSE: ${response}`);
+    speak(response);
+  };
+
+  const speak = (text: string) => {
+    if (!window.speechSynthesis) return;
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.pitch = 0.8;
+    utterance.rate = 1.1;
+    utterance.onstart = () => setIsTalking(true);
+    utterance.onend = () => setIsTalking(false);
+    window.speechSynthesis.speak(utterance);
+  };
+
+  const startListening = () => {
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      addLog("SPEECH API NOT SUPPORTED IN THIS BROWSER.");
+      return;
+    }
+    const recognition = new SpeechRecognition();
+    recognition.lang = 'en-US';
+    recognition.onstart = () => { setIsListening(true); setTranscript('Listening...'); };
+    recognition.onresult = (event: any) => {
+      const msg = event.results[0][0].transcript;
+      setTranscript(msg);
+      addLog(`VOICE INPUT: ${msg}`);
+      handleQuery(msg);
+    };
+    recognition.onend = () => setIsListening(false);
+    recognition.start();
   };
 
   // ── 3D Scene Setup ────────────────────────────────────────────────────────
@@ -232,6 +287,17 @@ export default function ExperienceEngine({ onBack }: ExperienceEngineProps) {
     const visor = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.1, 0.15), new THREE.MeshStandardMaterial({ color: 0x444444, metalness: 0.8 }));
     visor.position.set(0, -0.1, 0.3);
     head.add(visor);
+
+    // AI Components Labels (Truthful Hardware markers)
+    const micMark = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.02, 16), new THREE.MeshStandardMaterial({ color: 0x222222 }));
+    micMark.position.set(0.15, -0.2, 0.2);
+    micMark.rotation.x = Math.PI/2;
+    head.add(micMark); // I2S Mic loc
+
+    const speakerMark = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.08, 0.02), new THREE.MeshStandardMaterial({ color: 0x333333 }));
+    speakerMark.position.set(-0.15, -0.25, 0.2);
+    speakerMark.rotation.x = Math.PI/2;
+    head.add(speakerMark); // I2S Speaker loc
   };
 
   const drawFace = (t: number) => {
@@ -239,56 +305,58 @@ export default function ExperienceEngine({ onBack }: ExperienceEngineProps) {
     const ctx = faceCanvas.current.getContext('2d');
     if (!ctx) return;
 
-    const phase = getPhase();
+    const phase = phaseRef.current;
     const sim   = simRef.current;
     const isOverheating = sim.temp > 30;
-    const isNightVal    = sim.light < 20;
+    const isSleepy      = sim.light < 20;
 
-    // 1. Face Background (DRAMATIC RED FOR FIRE)
+    // 1. Face Background (Dramatized)
     let bgColor = '#000000';
-    if (phase === 'ALERT') bgColor = '#FF0000'; // BRIGHT HAZARD RED
-    else if (isOverheating) bgColor = '#FF6600'; // MOLTEN ORANGE
-    else if (isNightVal)  bgColor = '#000022'; // DEEP NIGHT
-    else if (relayRef.current) bgColor = '#ffffff'; // POWER SURGE
+    if (phase === 'ALERT') bgColor = '#FF0000';
+    else if (isOverheating) bgColor = '#FF6600';
+    else if (isSleepy)  bgColor = '#000022';
 
     ctx.fillStyle = bgColor;
     ctx.fillRect(0, 0, 256, 256);
 
-    // 2. Analog Glitch Scanlines
-    ctx.strokeStyle = 'rgba(255,255,255,0.08)';
-    ctx.lineWidth = 2;
-    for(let i=0; i<256; i+=6) {
-      const y = (i + t*80) % 256;
-      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(256, y); ctx.stroke();
-    }
-
-    // 3. Eye Expressions (High Fidelity)
+    // 2. Truthful Ocular Expressions (Sharp Primitives)
     ctx.lineWidth = 14;
     ctx.lineCap   = 'round';
-    
     let eyeColor = phase === 'ALERT' ? '#ffffff' : (isOverheating ? '#ffffff' : COLORS.accent);
     ctx.strokeStyle = eyeColor;
-    ctx.shadowBlur  = 20;
+    ctx.shadowBlur  = 15;
     ctx.shadowColor = eyeColor;
 
+    if (isTalking) {
+      // 3. Talking Mouth Waveform
+      ctx.beginPath();
+      ctx.lineWidth = 6;
+      for(let i=0; i<80; i+=5) {
+        const h = Math.sin(t * 30 + i) * 30;
+        ctx.moveTo(88+i, 180-h/2); ctx.lineTo(88+i, 180+h/2);
+      }
+      ctx.stroke();
+    }
+
     if (phase === 'ALERT') {
-      // GIANT HAZARD X EYES
+      // Ocular "X" Primitives
       ctx.beginPath(); ctx.moveTo(60, 80); ctx.lineTo(110, 140); ctx.stroke();
       ctx.beginPath(); ctx.moveTo(110, 80); ctx.lineTo(60, 140); ctx.stroke();
       ctx.beginPath(); ctx.moveTo(146, 80); ctx.lineTo(196, 140); ctx.stroke();
       ctx.beginPath(); ctx.moveTo(196, 80); ctx.lineTo(146, 140); ctx.stroke();
-    } else if (isNightVal) {
-      // SINGLE LINE SLEEPING EYES
-      ctx.beginPath(); ctx.moveTo(60, 128); ctx.lineTo(110, 128); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(146, 128); ctx.lineTo(196, 128); ctx.stroke();
+    } else if (isSleepy) {
+      // Sleepy Ocular Arcs
+      ctx.beginPath(); ctx.arc(100, 128, 30, Math.PI, 0); ctx.stroke();
+      ctx.beginPath(); ctx.arc(156, 128, 30, Math.PI, 0); ctx.stroke();
     } else if (phase === 'ENGAGED') {
-      // LARGE SOCIAL DOTS
-      ctx.beginPath(); ctx.arc(100, 128, 15, 0, Math.PI*2); ctx.stroke();
-      ctx.beginPath(); ctx.arc(156, 128, 15, 0, Math.PI*2); ctx.stroke();
+      // Focused Ocular Circles (TFT style)
+      ctx.beginPath(); ctx.arc(100, 128, 25, 0, Math.PI*2); ctx.stroke();
+      ctx.beginPath(); ctx.arc(156, 128, 25, 0, Math.PI*2); ctx.stroke();
     } else {
-      // IDLE SLITS
-      ctx.beginPath(); ctx.moveTo(80, 128); ctx.lineTo(120, 128); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(136, 128); ctx.lineTo(176, 128); ctx.stroke();
+      // Idle Scanning Arcs
+      const scanOffset = Math.sin(t*2)*10;
+      ctx.beginPath(); ctx.arc(100+scanOffset, 128, 20, 0, Math.PI, true); ctx.stroke();
+      ctx.beginPath(); ctx.arc(156+scanOffset, 128, 20, 0, Math.PI, true); ctx.stroke();
     }
 
     faceTexture.current.needsUpdate = true;
@@ -511,7 +579,16 @@ export default function ExperienceEngine({ onBack }: ExperienceEngineProps) {
 
         <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
           <div style={{ fontSize: '0.5rem', color: 'rgba(255,255,255,0.6)', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
-            <Activity size={12} /> ACTION LOGS
+            <Activity size={12} /> NEURAL AI INTERFACE (VOICE READY)
+          </div>
+          <div style={{ padding: 10, background: 'rgba(6,255,165,0.1)', border: '1px solid #06FFA5', borderRadius: 4, marginBottom: 10, display: 'flex', alignItems: 'center', gap: 10 }}>
+            <button 
+              onClick={startListening}
+              style={{ background: isListening ? '#FF006E' : '#06FFA5', border: 'none', borderRadius: '50%', width: 24, height: 24, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+            >
+              <Radio size={14} color="#000" />
+            </button>
+            <div style={{ fontSize: '0.5rem', color: '#06FFA5' }}>{isListening ? 'LISTENING...' : 'READY FOR VOICE INPUT'}</div>
           </div>
           <div style={{ display:'grid', gridTemplateColumns:'repeat(3, 1fr)', gap:5, marginBottom: 10 }}>
               {['RELAY','BUZZER','N20','MG90S','TFT'].map(a => (
@@ -532,8 +609,10 @@ export default function ExperienceEngine({ onBack }: ExperienceEngineProps) {
               ))}
             </div>
           <div style={{ flex: 1, overflowY: 'auto', background: 'rgba(0,0,0,0.5)', border: '1px solid rgba(255,255,255,0.1)', padding: 10, fontSize: '0.52rem', lineHeight: 1.6 }}>
+            {transcript && <div style={{ color: '#06FFA5', marginBottom: 5 }}>YOU: "{transcript}"</div>}
+            {lastResponse && <div style={{ color: '#fff', marginBottom: 10, borderLeft: '2px solid #06FFA5', paddingLeft: 8 }}>KAI: {lastResponse}</div>}
             {logs.map((l, i) => (
-              <div key={i} style={{ color: i === 0 ? COLORS.accent : 'rgba(255,255,255,0.4)', borderBottom: '1px solid rgba(255,255,255,0.05)', padding: '2px 0' }}>
+              <div key={i} style={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.45rem', borderBottom: '1px solid rgba(255,255,255,0.05)', padding: '2px 0' }}>
                 {`> ${l}`}
               </div>
             ))}
