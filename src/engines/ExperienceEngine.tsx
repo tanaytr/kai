@@ -41,6 +41,7 @@ export default function ExperienceEngine({ onBack }: ExperienceEngineProps) {
   const faceCanvas     = useRef<HTMLCanvasElement>(null);
   const faceTexture    = useRef<any>(null);
   const soundRings     = useRef<any[]>([]);
+  const smokeParticles = useRef<any[]>([]);
 
   const addLog = (msg: string) => {
     setLogs(prev => [msg, ...prev].slice(0, 12));
@@ -61,7 +62,7 @@ export default function ExperienceEngine({ onBack }: ExperienceEngineProps) {
     const THREE = (window as any).THREE;
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(COLORS.bg);
-    scene.fog = new THREE.Fog(COLORS.bg, 6, 12);
+    scene.fog = new THREE.Fog(COLORS.bg, 10, 50); // Pushed back fog for visibility
     sceneRef.current = scene;
 
     const camera = new THREE.PerspectiveCamera(45, canvasRef.current.clientWidth / canvasRef.current.clientHeight, 0.1, 1000);
@@ -90,9 +91,14 @@ export default function ExperienceEngine({ onBack }: ExperienceEngineProps) {
     scene.add(spotlight);
 
     // KAI-specific point light to ensure visibility
-    const point = new THREE.PointLight(COLORS.accent, 2, 8);
+    const point = new THREE.PointLight(COLORS.accent, 2, 12);
     point.position.set(0, 1, 1);
     scene.add(point);
+
+    // Path Lighting (Entrance)
+    const pathLight = new THREE.PointLight(0x3A86FF, 1.5, 20);
+    pathLight.position.set(0, 2, -10);
+    scene.add(pathLight);
 
     // Floor Grid
     const grid = new THREE.GridHelper(20, 40, 0x06FFA5, 0x002233);
@@ -193,17 +199,29 @@ export default function ExperienceEngine({ onBack }: ExperienceEngineProps) {
     // Screen Glass Cover
     const glass = new THREE.Mesh(
       new THREE.CircleGeometry(0.3, 32),
-      new THREE.MeshStandardMaterial({ color: 0x000000, metalness: 1.0, roughness: 0.1, transparent: true, opacity: 0.4 })
+      new THREE.MeshStandardMaterial({ color: 0x000000, metalness: 1.0, roughness: 0.1, transparent: true, opacity: 0.25 })
     );
     glass.position.set(0, 0, 0.3);
     head.add(glass);
+
+    // Actuator VFX: Smoke Particles for Alert
+    const smokeGroup = new THREE.Group();
+    root.add(smokeGroup);
+    for (let i = 0; i < 20; i++) {
+      const s = new THREE.Mesh(
+        new THREE.BoxGeometry(0.1, 0.1, 0.1),
+        new THREE.MeshBasicMaterial({ color: 0x444444, transparent: true, opacity: 0 })
+      );
+      smokeGroup.add(s);
+      smokeParticles.current.push(s);
+    }
 
     const visor = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.1, 0.15), new THREE.MeshStandardMaterial({ color: 0x444444, metalness: 0.8 }));
     visor.position.set(0, -0.1, 0.3);
     head.add(visor);
   };
 
-  const currentZ = useRef(-10); // Start originally away
+  const currentZ = useRef(-8); // Visible but distant starting point
   const targetZ  = useRef(0);
 
   const animate = () => {
@@ -300,22 +318,42 @@ export default function ExperienceEngine({ onBack }: ExperienceEngineProps) {
 
         // 5. Physical Tilt Mapping (Dramatic 35-degree tip)
         if (isTilted) {
-          rootGroup.current.rotation.z = Math.min(0.6, rootGroup.current.rotation.z + 0.05); // Tip over
-          rootGroup.current.position.y = -0.1;
+          rootGroup.current.rotation.z = Math.min(0.8, rootGroup.current.rotation.z + 0.05); // 45-degree tip
+          rootGroup.current.position.y = -0.15;
+          rootGroup.current.rotation.x = Math.sin(t * 10) * 0.1; // Jitter while tilted
         } else {
           rootGroup.current.rotation.z *= 0.9;
+          rootGroup.current.rotation.x *= 0.9;
           rootGroup.current.position.y *= 0.9;
         }
 
-        // 6. Independent Head Scanning
+        // 6. Independent Head Scanning & Nodding
         if (phase === 'IDLE') {
           headGroup.current.rotation.y = Math.sin(t * 0.5) * 0.4;
         } else if (phase === 'ENGAGED') {
           headGroup.current.rotation.y = Math.sin(t * 1.5) * 0.2; // Tracking
+          headGroup.current.rotation.x = Math.sin(t * 8) * 0.1 - 0.2; // Nodding
         } else if (phase === 'ALERT') {
           headGroup.current.rotation.y = Math.sin(t * 22) * 0.1; // Panic jitter
+          // 7. Smoke Particles Logic
+          smokeParticles.current.forEach((sm, i) => {
+            if (sm.material.opacity <= 0) {
+               sm.position.set(0, 0.8, 0);
+               sm.material.opacity = 0.8;
+               sm.userData.vx = (Math.random()-0.5)*0.05;
+               sm.userData.vy = 0.05 + Math.random()*0.05;
+               sm.userData.vz = (Math.random()-0.5)*0.05;
+            }
+            sm.position.x += sm.userData.vx;
+            sm.position.y += sm.userData.vy;
+            sm.position.z += sm.userData.vz;
+            sm.material.opacity -= 0.015;
+            sm.scale.multiplyScalar(1.02);
+          });
         } else {
           headGroup.current.rotation.y *= 0.95;
+          // Fade smokes
+          smokeParticles.current.forEach(sm => { sm.material.opacity *= 0.9; });
         }
       }
     }
@@ -344,7 +382,7 @@ export default function ExperienceEngine({ onBack }: ExperienceEngineProps) {
   const triggerSummon = () => {
     if (isSummoned) return;
     addLog("SUMMON SIGNAL SENT → N20 PWM CONTROL");
-    currentZ.current = -18; // Start truly far away
+    currentZ.current = -15; // Set to distant view
     targetZ.current = 0;
     setSimValues(v => ({ ...v, distance: 30 }));
     setIsSummoned(true);
