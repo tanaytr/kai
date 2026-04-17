@@ -302,6 +302,8 @@ export default function ExperienceEngine({ onBack }: ExperienceEngineProps) {
     const t = performance.now() * 0.001;
 
     if (rootGroup.current && headGroup.current) {
+      const sim = simRef.current;
+      const phase = getPhase(); // This now uses simRef internally
       const prevZ = currentZ.current;
       currentZ.current += (targetZ.current - currentZ.current) * 0.04;
       rootGroup.current.position.z = currentZ.current;
