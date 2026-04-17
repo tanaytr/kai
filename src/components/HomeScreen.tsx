@@ -170,13 +170,13 @@ export default function HomeScreen({ onNavigate }: HomeScreenProps) {
                   </div>
                   
                   <div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 15, marginBottom: 20 }}>
-                      <div style={{ padding: 12, background: 'rgba(0,0,0,0.3)', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <Icon size={32} color="#fff" style={{ filter: 'drop-shadow(0 0 10px rgba(255,255,255,0.8))', flexShrink: 0 }} />
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 15 }}>
+                      <div style={{ padding: 10, background: 'rgba(0,0,0,0.3)', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <Icon size={28} color="#fff" style={{ filter: 'drop-shadow(0 0 10px rgba(255,255,255,0.8))', flexShrink: 0 }} />
                       </div>
                       <div>
-                        <div style={{ fontFamily: "'Press Start 2P', cursive", fontSize: 'clamp(0.6rem, 1.1vw, 0.85rem)', color: '#fff', marginBottom: 6, letterSpacing: '1px' }}>{engine.title}</div>
-                        <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 'clamp(0.45rem, 0.8vw, 0.6rem)', color: 'rgba(255,255,255,0.7)', textTransform: 'uppercase', letterSpacing: '2px' }}>{engine.subtitle}</div>
+                        <div style={{ fontFamily: "'Press Start 2P', cursive", fontSize: 'clamp(0.5rem, 0.95vw, 0.7rem)', color: '#fff', marginBottom: 4, letterSpacing: '0.5px' }}>{engine.title}</div>
+                        <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 'clamp(0.4rem, 0.7vw, 0.55rem)', color: 'rgba(255,255,255,0.7)', textTransform: 'uppercase', letterSpacing: '1px' }}>{engine.subtitle}</div>
                       </div>
                     </div>
                     <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 'clamp(0.5rem, 0.85vw, 0.7rem)', color: 'rgba(255,255,255,0.9)', lineHeight: 1.8, marginBottom: 20 }}>{engine.desc}</div>
