@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { ArrowLeft, RotateCcw, Hand, ZoomIn, ZoomOut, HelpCircle, X } from 'lucide-react';
+import { ArrowLeft, RotateCcw, Hand, ZoomIn, ZoomOut, HelpCircle, X, Radio } from 'lucide-react';
 import { gestureController, type GestureState } from '../utils/gestureControl';
 import { musicEngine } from '../utils/musicEngine';
 
@@ -208,7 +208,7 @@ export default function ExploreEngine({ onBack }: ExploreEngineProps) {
   const [showHelp, setShowHelp]             = useState(false);
 
   const canvasRef   = useRef<HTMLCanvasElement>(null);
-  const faceCanvas  = useRef<HTMLCanvasElement>(null);
+  const faceCanvas  = useRef<HTMLCanvasElement | null>(null);
   const faceTexture = useRef<any>(null);
   const sceneRef    = useRef<any>(null);
   const cameraRef   = useRef<any>(null);
