@@ -24,7 +24,8 @@ export default function ExperienceEngine({ onBack }: ExperienceEngineProps) {
   const [isNight, setIsNight] = useState(false);
   const [isTilted, setIsTilted] = useState(false);
   const [isClimateStressed, setIsClimateStressed] = useState(false);
-  const [logs, setLogs] = useState<string[]>(['KAI SYSTEM INITIALIZED', 'WAITING FOR SIMULATION INPUT...']);
+  const [isRelayOn, setIsRelayOn]   = useState(false);
+  const [logs, setLogs]             = useState<string[]>(['KAI SYSTEM INITIALIZED', 'WAITING FOR SIMULATION INPUT...']);
   
   const rootGroup      = useRef<any>(null);
   const headGroup      = useRef<any>(null);
@@ -47,6 +48,18 @@ export default function ExperienceEngine({ onBack }: ExperienceEngineProps) {
     setLogs(prev => [msg, ...prev].slice(0, 12));
   };
 
+  const getPhase = () => {
+    if (simValues.gas > 2500) return 'ALERT';
+    if (simValues.distance < 40) return 'ENGAGED';
+    if (simValues.light < 20) return 'DROWSY';
+    return 'IDLE';
+  };
+
+  const triggerBuzzer = () => {
+    addLog("BUZZER GPIO 25 TRIGGERED");
+    musicEngine.playSfx(1000);
+  };
+
   // ── 3D Scene Setup ────────────────────────────────────────────────────────
 
   function loadThree(cb: () => void) {
@@ -65,7 +78,7 @@ export default function ExperienceEngine({ onBack }: ExperienceEngineProps) {
     const THREE = (window as any).THREE;
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(COLORS.bg);
-    scene.fog = new THREE.Fog(COLORS.bg, 10, 50); // Restored Fog
+    scene.fog = new THREE.Fog(COLORS.bg, 10, 50);
     sceneRef.current = scene;
 
     const camera = new THREE.PerspectiveCamera(45, canvasRef.current.clientWidth / canvasRef.current.clientHeight, 0.1, 1000);
@@ -81,7 +94,6 @@ export default function ExperienceEngine({ onBack }: ExperienceEngineProps) {
     const ambient = new THREE.AmbientLight(0xffffff, 0.4);
     scene.add(ambient);
     
-    // Hemisphere light for better overall visibility
     const hemi = new THREE.HemisphereLight(0xffffff, 0x444444, 0.6);
     scene.add(hemi);
 
@@ -93,17 +105,14 @@ export default function ExperienceEngine({ onBack }: ExperienceEngineProps) {
     spotlight.position.set(2, 5, 2);
     scene.add(spotlight);
 
-    // KAI-specific point light to ensure visibility
     const point = new THREE.PointLight(COLORS.accent, 2, 12);
     point.position.set(0, 1, 1);
     scene.add(point);
 
-    // Path Lighting (Entrance)
     const pathLight = new THREE.PointLight(0x3A86FF, 1.5, 20);
     pathLight.position.set(0, 2, -10);
     scene.add(pathLight);
 
-    // Floor Grid
     const grid = new THREE.GridHelper(20, 40, 0x06FFA5, 0x002233);
     grid.position.y = -0.4;
     scene.add(grid);
@@ -118,7 +127,6 @@ export default function ExperienceEngine({ onBack }: ExperienceEngineProps) {
     rootGroup.current = root;
     sceneRef.current.add(root);
 
-    // Dynamic data-driven parts (Simplified Explore Engine spec)
     const boxes = [
       { id: 'chassis', w:0.8, h:0.4, d:0.6, y:0, col:0x1a1a2e, em:0x00d4ff, ei:0.1 },
       { id: 'core',    w:0.4, h:0.2, d:0.4, y:0.1, col:0x16213e, em:0x00ffff, ei:0.25 },
@@ -163,13 +171,11 @@ export default function ExperienceEngine({ onBack }: ExperienceEngineProps) {
     const headSphere = new THREE.Mesh(new THREE.SphereGeometry(0.35, 32, 24), new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.2 }));
     head.add(headSphere);
 
-    // Screen Group with Canvas Face
     const screenGroup = new THREE.Group();
     screenGroup.position.set(0, 0, 0.28);
     head.add(screenGroup);
 
     const faceGeom = new THREE.CircleGeometry(0.28, 32);
-    // Initialize Canvas for face
     const canvas = document.createElement('canvas');
     canvas.width = 256; canvas.height = 256;
     (faceCanvas as any).current = canvas;
@@ -185,7 +191,6 @@ export default function ExperienceEngine({ onBack }: ExperienceEngineProps) {
     faceMesh.current = facePlane;
     screenGroup.add(facePlane);
 
-    // Actuator VFX: Sound Waves (Buzzer)
     const ringGroup = new THREE.Group();
     root.add(ringGroup);
     for (let i = 0; i < 3; i++) {
@@ -199,7 +204,6 @@ export default function ExperienceEngine({ onBack }: ExperienceEngineProps) {
       soundRings.current.push(r);
     }
 
-    // Screen Glass Cover
     const glass = new THREE.Mesh(
       new THREE.CircleGeometry(0.3, 32),
       new THREE.MeshStandardMaterial({ color: 0x000000, metalness: 1.0, roughness: 0.1, transparent: true, opacity: 0.25 })
@@ -207,7 +211,6 @@ export default function ExperienceEngine({ onBack }: ExperienceEngineProps) {
     glass.position.set(0, 0, 0.3);
     head.add(glass);
 
-    // Actuator VFX: Smoke Particles for Alert
     const smokeGroup = new THREE.Group();
     root.add(smokeGroup);
     for (let i = 0; i < 20; i++) {
@@ -224,81 +227,87 @@ export default function ExperienceEngine({ onBack }: ExperienceEngineProps) {
     head.add(visor);
   };
 
-  const currentZ = useRef(-8); // Start distant
+  const drawFace = (t: number) => {
+    const ctx = faceCanvas.current.getContext('2d');
+    if (!ctx) return;
+
+    const phase = getPhase();
+    const overHeat = simValues.temp > 40;
+    const isNight  = simValues.light < 20;
+
+    let bgColor = '#000000';
+    if (phase === 'ALERT') bgColor = '#440000';
+    if (overHeat) bgColor = '#442200';
+    if (isNight)  bgColor = '#000018';
+    if (isRelayOn) bgColor = '#ffffff';
+
+    ctx.fillStyle = bgColor;
+    ctx.fillRect(0, 0, 256, 256);
+
+    ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+    ctx.lineWidth = 1;
+    for(let i=0; i<256; i+=4) {
+      const y = (i + t*50) % 256;
+      ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(256,y); ctx.stroke();
+    }
+
+    ctx.lineWidth = 12;
+    ctx.lineCap   = 'round';
+    
+    let eyeColor = COLORS.accent;
+    if (phase === 'ALERT') eyeColor = '#ff0033';
+    if (overHeat) eyeColor = '#ff8800';
+    if (isNight)  eyeColor = '#3a86ff';
+
+    ctx.strokeStyle = eyeColor;
+    ctx.shadowBlur  = 15;
+    ctx.shadowColor = eyeColor;
+
+    if (isNight) {
+      ctx.beginPath(); ctx.arc(100, 120, 30, 0, Math.PI); ctx.stroke();
+      ctx.beginPath(); ctx.arc(156, 120, 30, 0, Math.PI); ctx.stroke();
+    } else if (phase === 'ALERT') {
+      ctx.beginPath(); ctx.moveTo(70, 100); ctx.lineTo(110, 140); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(186, 100); ctx.lineTo(146, 140); ctx.stroke();
+    } else if (phase === 'ENGAGED') {
+      ctx.beginPath(); ctx.arc(100, 128, 15, 0, Math.PI*2); ctx.stroke();
+      ctx.beginPath(); ctx.arc(156, 128, 15, 0, Math.PI*2); ctx.stroke();
+    } else {
+      ctx.beginPath(); ctx.moveTo(80, 128); ctx.lineTo(120, 128); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(136, 128); ctx.lineTo(176, 128); ctx.stroke();
+    }
+
+    faceTexture.current.needsUpdate = true;
+  };
+
+  const currentZ = useRef(-8);
   const targetZ  = useRef(0);
 
   const animate = () => {
     if (!mountedRef.current) return;
-    const THREE = (window as any).THREE;
     const t = performance.now() * 0.001;
 
     if (rootGroup.current && headGroup.current) {
-      // 1. Handle Locomotion (Smooth Rolling)
       const prevZ = currentZ.current;
-      currentZ.current += (targetZ.current - currentZ.current) * 0.04; // Slightly slower, smoother lerp
+      currentZ.current += (targetZ.current - currentZ.current) * 0.04;
       rootGroup.current.position.z = currentZ.current;
 
       const deltaZ = currentZ.current - prevZ;
       const wheelRadius = 0.2;
-      wheels.current.forEach(w => {
-        w.rotation.x -= deltaZ / wheelRadius;
-      });
+      wheels.current.forEach(w => { w.rotation.x -= deltaZ / wheelRadius; });
 
       if (isSummoned && Math.abs(currentZ.current - targetZ.current) < 0.01) {
         setIsSummoned(false);
         addLog("SUMMON COMPLETE - DOCKED AT USER");
       }
 
-      // 2. Handle Head Tilt
       const targetTilt = phase === 'DROWSY' ? 0.6 : (phase === 'ENGAGED' ? -0.2 : 0);
       headGroup.current.rotation.x += (targetTilt - headGroup.current.rotation.x) * 0.08;
 
-      // 3. Handle Dynamic Expressions (Canvas Logic)
       if (faceCanvas.current && faceTexture.current) {
-        const ctx = faceCanvas.current.getContext('2d');
-        if (ctx) {
-          ctx.clearRect(0, 0, 256, 256);
-          ctx.fillStyle = '#000';
-          ctx.beginPath(); ctx.arc(128, 128, 120, 0, Math.PI * 2); ctx.fill();
-
-          // Scanlines effect
-          ctx.strokeStyle = 'rgba(0,212,255,0.05)';
-          for(let i=0; i<256; i+=4) { ctx.beginPath(); ctx.moveTo(0,i); ctx.lineTo(256,i); ctx.stroke(); }
-
-          const color = phase === 'ALERT' ? COLORS.alert : (phase === 'DROWSY' ? COLORS.info : COLORS.accent);
-          ctx.fillStyle = color;
-          ctx.shadowBlur = 15; ctx.shadowColor = color;
-
-          const blink = Math.sin(t * 4) > 0.95 && phase === 'IDLE';
-          
-          if (phase === 'ALERT') {
-            // X_X Face
-            ctx.lineWidth = 12; ctx.strokeStyle = color;
-            ctx.beginPath(); ctx.moveTo(60, 80); ctx.lineTo(100, 140); ctx.stroke();
-            ctx.beginPath(); ctx.moveTo(100, 80); ctx.lineTo(60, 140); ctx.stroke();
-            ctx.beginPath(); ctx.moveTo(156, 80); ctx.lineTo(196, 140); ctx.stroke();
-            ctx.beginPath(); ctx.moveTo(196, 80); ctx.lineTo(156, 140); ctx.stroke();
-          } else if (phase === 'DROWSY') {
-            // Sleepy Slits
-            ctx.fillRect(60, 110, 45, 8); ctx.fillRect(151, 110, 45, 8);
-          } else if (phase === 'ENGAGED') {
-            // Happy ^_^
-            ctx.lineWidth = 10; ctx.strokeStyle = color;
-            ctx.beginPath(); ctx.arc(80, 140, 30, Math.PI, 0); ctx.stroke();
-            ctx.beginPath(); ctx.arc(176, 140, 30, Math.PI, 0); ctx.stroke();
-          } else {
-            // Normal Round Eyes
-            if (!blink) {
-              ctx.beginPath(); ctx.arc(80, 128, 25, 0, Math.PI * 2); ctx.fill();
-              ctx.beginPath(); ctx.arc(176, 128, 25, 0, Math.PI * 2); ctx.fill();
-            }
-          }
-          faceTexture.current.needsUpdate = true;
-        }
-
+        drawFace(t);
         const alertFlash = phase === 'ALERT' && Math.sin(t * 15) > 0;
 
-        // Global Thermal Glow (Chassis Reactions)
         chassisParts.current.forEach((mesh, id) => {
           if (mesh.material.emissive) {
             if (alertFlash) mesh.material.emissive.set(COLORS.alert);
@@ -307,7 +316,6 @@ export default function ExperienceEngine({ onBack }: ExperienceEngineProps) {
           }
         });
 
-        // 4. Actuator VFX: Sound Waves
         soundRings.current.forEach((ring, i) => {
           if (phase === 'ALERT' || phase === 'ENGAGED') {
             const cycle = (t * 2 + i * 0.3) % 1;
@@ -319,26 +327,34 @@ export default function ExperienceEngine({ onBack }: ExperienceEngineProps) {
           }
         });
 
-        // 5. Physical Tilt Mapping (Dramatic 35-degree tip)
         if (isTilted) {
-          rootGroup.current.rotation.z = Math.min(0.8, rootGroup.current.rotation.z + 0.05); // 45-degree tip
+          rootGroup.current.rotation.z = Math.min(0.8, rootGroup.current.rotation.z + 0.05); 
           rootGroup.current.position.y = -0.15;
-          rootGroup.current.rotation.x = Math.sin(t * 10) * 0.1; // Jitter while tilted
+          rootGroup.current.rotation.x = Math.sin(t * 10) * 0.1;
         } else {
           rootGroup.current.rotation.z *= 0.9;
           rootGroup.current.rotation.x *= 0.9;
           rootGroup.current.position.y *= 0.9;
         }
 
-        // 6. Independent Head Scanning & Nodding
+        if (isRelayOn) {
+          rootGroup.current.position.z += Math.sin(t * 60) * 0.02;
+          rootGroup.current.scale.set(1.02, 1.02, 1.02);
+        } else {
+          rootGroup.current.scale.set(1, 1, 1);
+        }
+
+        const overHeat = simValues.temp > 40;
+        const isNight  = simValues.light < 20;
+
         if (phase === 'IDLE') {
-          headGroup.current.rotation.y = Math.sin(t * 0.5) * 0.4;
+          headGroup.current.rotation.y = Math.sin(t * (isNight ? 0.2 : 0.5)) * 0.4;
+          if (isNight) headGroup.current.rotation.x = 0.2;
         } else if (phase === 'ENGAGED') {
-          headGroup.current.rotation.y = Math.sin(t * 1.5) * 0.2; // Tracking
-          headGroup.current.rotation.x = Math.sin(t * 8) * 0.1 - 0.2; // Nodding
+          headGroup.current.rotation.y = Math.sin(t * 1.5) * 0.2;
+          headGroup.current.rotation.x = Math.sin(t * 8) * 0.1 - 0.2;
         } else if (phase === 'ALERT') {
-          headGroup.current.rotation.y = Math.sin(t * 22) * 0.1; // Panic jitter
-          // 7. Smoke Particles Logic
+          headGroup.current.rotation.y = Math.sin(t * 22) * 0.1;
           smokeParticles.current.forEach((sm, i) => {
             if (sm.material.opacity <= 0) {
                sm.position.set(0, 0.8, 0);
@@ -353,9 +369,11 @@ export default function ExperienceEngine({ onBack }: ExperienceEngineProps) {
             sm.material.opacity -= 0.015;
             sm.scale.multiplyScalar(1.02);
           });
+        } else if (overHeat) {
+          headGroup.current.rotation.x = Math.sin(t * 50) * 0.05;
         } else {
           headGroup.current.rotation.y *= 0.95;
-          // Fade smokes
+          headGroup.current.rotation.x *= 0.95;
           smokeParticles.current.forEach(sm => { sm.material.opacity *= 0.9; });
         }
       }
@@ -365,14 +383,8 @@ export default function ExperienceEngine({ onBack }: ExperienceEngineProps) {
     animRef.current = requestAnimationFrame(animate);
   };
 
-  // ── Simulation Logic ───────────────────────────────────────────────────────
-
   useEffect(() => {
-    let nextPhase: KAIState = 'IDLE';
-    if (simValues.gas > 2500) nextPhase = 'ALERT';
-    else if (simValues.distance < 40) nextPhase = 'ENGAGED';
-    else if (simValues.light < 20) nextPhase = 'DROWSY';
-
+    const nextPhase = getPhase();
     if (nextPhase !== phase) {
       setPhase(nextPhase);
       addLog(`PHASE SHIFT → ${nextPhase}`);
@@ -380,12 +392,12 @@ export default function ExperienceEngine({ onBack }: ExperienceEngineProps) {
     }
   }, [simValues, phase]);
 
-  useEffect(() => { loadThree(setupScene); return () => { mountedRef.current = false; if(animRef.current) cancelAnimationFrame(animRef.current); }; }, []); // eslint-disable-line
+  useEffect(() => { loadThree(setupScene); return () => { mountedRef.current = false; if(animRef.current) cancelAnimationFrame(animRef.current); }; }, []);
 
   const triggerSummon = () => {
     if (isSummoned) return;
     addLog("SUMMON SIGNAL SENT → N20 PWM CONTROL");
-    currentZ.current = -15; // Set to distant view
+    currentZ.current = -15;
     targetZ.current = 0;
     setSimValues(v => ({ ...v, distance: 30 }));
     setIsSummoned(true);
@@ -423,10 +435,8 @@ export default function ExperienceEngine({ onBack }: ExperienceEngineProps) {
 
   return (
     <div style={{ position: 'fixed', inset: 0, background: COLORS.bg, color: 'white', fontFamily: "'JetBrains Mono', monospace", display: 'flex' }}>
-      {/* 3D Viewport */}
       <canvas ref={canvasRef} style={{ flex: 1, width: '100%', height: '100%', touchAction: 'none' }} />
 
-      {/* Diagnostics HUD (Right Panel) */}
       <div style={{ 
         position: 'fixed',
         right: 0,
@@ -446,7 +456,6 @@ export default function ExperienceEngine({ onBack }: ExperienceEngineProps) {
           <div style={{ fontSize: '0.55rem', color: 'rgba(255,255,255,0.4)' }}>PHASE 4: DIGITAL TWIN SIMULATOR</div>
         </div>
 
-        {/* Telemetry Grid (5 Sensors) */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 25 }}>
           {[
             { label: 'DIST (HC-SR04)', val: `${simValues.distance}cm`, color: simValues.distance < 40 ? COLORS.warning : COLORS.accent },
@@ -463,7 +472,6 @@ export default function ExperienceEngine({ onBack }: ExperienceEngineProps) {
           ))}
         </div>
 
-        {/* GPIO Pin Map (Simplified) */}
         <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 6, padding: 15, marginBottom: 25 }}>
           <div style={{ fontSize: '0.5rem', color: 'rgba(255,255,255,0.6)', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
             <Cpu size={12} /> GPIO STATUS (LIVE)
@@ -474,7 +482,7 @@ export default function ExperienceEngine({ onBack }: ExperienceEngineProps) {
               { p: 'G13', active: isSummoned, label: 'MOT_R' },
               { p: 'G25', active: phase === 'ALERT', label: 'BUZZ' },
               { p: 'G04', active: phase !== 'IDLE', label: 'SERVO' },
-              { p: 'G26', active: isClimateStressed, label: 'RELAY' },
+              { p: 'G26', active: isRelayOn, label: 'RELAY' },
               { p: 'G18', active: true, label: 'ECHO' }
             ].map((p, i) => (
               <div key={i} style={{ border: `1px solid ${p.active ? COLORS.accent : 'rgba(255,255,255,0.1)'}`, padding: '4px 6px', borderRadius: 2, fontSize: '0.38rem', color: p.active ? COLORS.accent : 'rgba(255,255,255,0.3)', background: p.active ? `${COLORS.accent}11` : 'none' }}>
@@ -484,11 +492,28 @@ export default function ExperienceEngine({ onBack }: ExperienceEngineProps) {
           </div>
         </div>
 
-        {/* Log Window */}
         <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
           <div style={{ fontSize: '0.5rem', color: 'rgba(255,255,255,0.6)', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
             <Activity size={12} /> ACTION LOGS
           </div>
+          <div style={{ display:'grid', gridTemplateColumns:'repeat(3, 1fr)', gap:5, marginBottom: 10 }}>
+              {['RELAY','BUZZER','N20','MG90S','TFT'].map(a => (
+                <div key={a} onClick={() => {
+                  if (a === 'RELAY') {
+                    setIsRelayOn(!isRelayOn);
+                    addLog(`RELAY GPIO 26 toggled: ${!isRelayOn ? 'ON' : 'OFF'}`);
+                    musicEngine.playSfx(100);
+                  } else if (a === 'BUZZER') {
+                    triggerBuzzer();
+                  } else if (a === 'N20') {
+                    triggerSummon();
+                  } else {
+                    addLog(`${a} Actuator Manual Pulse.`);
+                    musicEngine.playSfx(300);
+                  }
+                }} style={{ padding:6, background: (a==='RELAY'&&isRelayOn)?'rgba(255,0,110,0.3)':'rgba(6,255,165,0.05)', border: `1px solid ${(a==='RELAY'&&isRelayOn)?'#FF006E':'rgba(6,255,165,0.2)'}`, color:(a==='RELAY'&&isRelayOn)?'#FF006E':'#06FFA5', fontSize:'0.45rem', cursor:'pointer', textAlign:'center' }}>{a}</div>
+              ))}
+            </div>
           <div style={{ flex: 1, overflowY: 'auto', background: 'rgba(0,0,0,0.5)', border: '1px solid rgba(255,255,255,0.1)', padding: 10, fontSize: '0.52rem', lineHeight: 1.6 }}>
             {logs.map((l, i) => (
               <div key={i} style={{ color: i === 0 ? COLORS.accent : 'rgba(255,255,255,0.4)', borderBottom: '1px solid rgba(255,255,255,0.05)', padding: '2px 0' }}>
@@ -580,7 +605,11 @@ export default function ExperienceEngine({ onBack }: ExperienceEngineProps) {
             {isGasActive && "METHOD: MQ-2 GAS TEST → GC9A01 ALARM FACE"}
             {isSummoned && "METHOD: HC-SR04 SONAR → N20 TRACTION"}
           </div>
-        </div>
+          <style>{`
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-thumb { background: rgba(6,255,165,0.2); border-radius: 4px; }
+      `}</style>
+    </div>
       )}
 
       <style>{`
