@@ -61,21 +61,20 @@ export default function ExperienceEngine({ onBack }: ExperienceEngineProps) {
     if (!canvasRef.current || !(window as any).THREE) return;
     const THREE = (window as any).THREE;
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(COLORS.bg);
-    scene.fog = new THREE.Fog(COLORS.bg, 10, 50); // Pushed back fog for visibility
+    scene.background = new THREE.Color(0x000814); // Solid background, no fog
     sceneRef.current = scene;
 
     const camera = new THREE.PerspectiveCamera(45, canvasRef.current.clientWidth / canvasRef.current.clientHeight, 0.1, 1000);
-    camera.position.set(0, 1.8, 4.5);
+    camera.position.set(0, 2, 6);
     camera.lookAt(0, 0.5, 0);
     cameraRef.current = camera;
 
-    const renderer = new THREE.WebGLRenderer({ canvas: canvasRef.current, antialias: true, alpha: true });
+    const renderer = new THREE.WebGLRenderer({ canvas: canvasRef.current, antialias: true, alpha: false });
     renderer.setPixelRatio(window.devicePixelRatio);
     renderer.setSize(canvasRef.current.clientWidth, canvasRef.current.clientHeight);
     rendererRef.current = renderer;
 
-    const ambient = new THREE.AmbientLight(0xffffff, 0.4);
+    const ambient = new THREE.AmbientLight(0xffffff, 1.0); // Full brightness ambient
     scene.add(ambient);
     
     // Hemisphere light for better overall visibility
@@ -101,9 +100,14 @@ export default function ExperienceEngine({ onBack }: ExperienceEngineProps) {
     scene.add(pathLight);
 
     // Floor Grid
-    const grid = new THREE.GridHelper(20, 40, 0x06FFA5, 0x002233);
+    const grid = new THREE.GridHelper(30, 60, 0x06FFA5, 0x004466);
     grid.position.y = -0.4;
     scene.add(grid);
+
+    // DEBUG CUBE
+    const dbg = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.5, 0.5), new THREE.MeshBasicMaterial({ color: 0xff0000 }));
+    dbg.position.set(1.5, 0.5, 0);
+    scene.add(dbg);
 
     buildKai();
     animate();
@@ -221,7 +225,7 @@ export default function ExperienceEngine({ onBack }: ExperienceEngineProps) {
     head.add(visor);
   };
 
-  const currentZ = useRef(-8); // Visible but distant starting point
+  const currentZ = useRef(0); // Center by default for debug
   const targetZ  = useRef(0);
 
   const animate = () => {
