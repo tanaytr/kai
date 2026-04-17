@@ -33,7 +33,7 @@ export default function ExperienceEngine({ onBack }: ExperienceEngineProps) {
   const cameraRef      = useRef<any>(null);
   const rendererRef    = useRef<any>(null);
   const sceneRef       = useRef<any>(null);
-  const mountedRef     = useRef(true);
+  const mountedRef     = useRef(false);
   const animRef        = useRef<any>(null);
 
   // Group references for targeted animations
@@ -49,32 +49,36 @@ export default function ExperienceEngine({ onBack }: ExperienceEngineProps) {
 
   // ── 3D Scene Setup ────────────────────────────────────────────────────────
 
-  const loadThree = async (cb: () => void) => {
-    if ((window as any).THREE) return cb();
+  function loadThree(cb: () => void) {
+    if ((window as any).THREE) { cb(); return; }
+    const ex = document.querySelector('script[src*="three"]');
+    if (ex) { const p = setInterval(() => { if ((window as any).THREE) { clearInterval(p); cb(); } }, 30); return; }
     const s = document.createElement('script');
-    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/three.js/0.128.0/three.min.js'; // Using 128 for broader compatibility
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js';
     s.onload = cb;
     document.head.appendChild(s);
-  };
+  }
 
   const setupScene = () => {
-    if (!canvasRef.current || !(window as any).THREE) return;
+    if (!canvasRef.current || !(window as any).THREE || mountedRef.current) return;
+    mountedRef.current = true;
     const THREE = (window as any).THREE;
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x000814); // Solid background, no fog
+    scene.background = new THREE.Color(COLORS.bg);
+    scene.fog = new THREE.Fog(COLORS.bg, 10, 50); // Restored Fog
     sceneRef.current = scene;
 
     const camera = new THREE.PerspectiveCamera(45, canvasRef.current.clientWidth / canvasRef.current.clientHeight, 0.1, 1000);
-    camera.position.set(0, 2, 6);
+    camera.position.set(0, 1.8, 4.5);
     camera.lookAt(0, 0.5, 0);
     cameraRef.current = camera;
-
-    const renderer = new THREE.WebGLRenderer({ canvas: canvasRef.current, antialias: true, alpha: false });
+ 
+    const renderer = new THREE.WebGLRenderer({ canvas: canvasRef.current, antialias: true, alpha: true });
     renderer.setPixelRatio(window.devicePixelRatio);
     renderer.setSize(canvasRef.current.clientWidth, canvasRef.current.clientHeight);
     rendererRef.current = renderer;
 
-    const ambient = new THREE.AmbientLight(0xffffff, 1.0); // Full brightness ambient
+    const ambient = new THREE.AmbientLight(0xffffff, 0.4);
     scene.add(ambient);
     
     // Hemisphere light for better overall visibility
@@ -100,14 +104,9 @@ export default function ExperienceEngine({ onBack }: ExperienceEngineProps) {
     scene.add(pathLight);
 
     // Floor Grid
-    const grid = new THREE.GridHelper(30, 60, 0x06FFA5, 0x004466);
+    const grid = new THREE.GridHelper(20, 40, 0x06FFA5, 0x002233);
     grid.position.y = -0.4;
     scene.add(grid);
-
-    // DEBUG CUBE
-    const dbg = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.5, 0.5), new THREE.MeshBasicMaterial({ color: 0xff0000 }));
-    dbg.position.set(1.5, 0.5, 0);
-    scene.add(dbg);
 
     buildKai();
     animate();
@@ -225,7 +224,7 @@ export default function ExperienceEngine({ onBack }: ExperienceEngineProps) {
     head.add(visor);
   };
 
-  const currentZ = useRef(0); // Center by default for debug
+  const currentZ = useRef(-8); // Start distant
   const targetZ  = useRef(0);
 
   const animate = () => {
