@@ -43,15 +43,22 @@ export default function ExperienceEngine({ onBack }: ExperienceEngineProps) {
   const faceTexture    = useRef<any>(null);
   const soundRings     = useRef<any[]>([]);
   const smokeParticles = useRef<any[]>([]);
+  
+  // Real-time Refs to avoid stale state in the Animation Loop
+  const simRef         = useRef(simValues);
+  const relayRef       = useRef(isRelayOn);
+  const tiltRef        = useRef(isTilted);
+  const phaseRef       = useRef<string>('IDLE');
 
   const addLog = (msg: string) => {
     setLogs(prev => [msg, ...prev].slice(0, 12));
   };
 
   const getPhase = () => {
-    if (simValues.gas > 2500) return 'ALERT';
-    if (simValues.distance < 40) return 'ENGAGED';
-    if (simValues.light < 20) return 'DROWSY';
+    const sim = simRef.current;
+    if (sim.gas > 2500) return 'ALERT';
+    if (sim.distance < 40) return 'ENGAGED';
+    if (sim.light < 20) return 'DROWSY';
     return 'IDLE';
   };
 
@@ -233,47 +240,53 @@ export default function ExperienceEngine({ onBack }: ExperienceEngineProps) {
     if (!ctx) return;
 
     const phase = getPhase();
-    const overHeat = simValues.temp > 40;
-    const isNight  = simValues.light < 20;
+    const sim   = simRef.current;
+    const isOverheating = sim.temp > 30;
+    const isNightVal    = sim.light < 20;
 
+    // 1. Face Background (DRAMATIC RED FOR FIRE)
     let bgColor = '#000000';
-    if (phase === 'ALERT') bgColor = '#440000';
-    if (overHeat) bgColor = '#442200';
-    if (isNight)  bgColor = '#000018';
-    if (isRelayOn) bgColor = '#ffffff';
+    if (phase === 'ALERT') bgColor = '#FF0000'; // BRIGHT HAZARD RED
+    else if (isOverheating) bgColor = '#FF6600'; // MOLTEN ORANGE
+    else if (isNightVal)  bgColor = '#000022'; // DEEP NIGHT
+    else if (relayRef.current) bgColor = '#ffffff'; // POWER SURGE
 
     ctx.fillStyle = bgColor;
     ctx.fillRect(0, 0, 256, 256);
 
-    ctx.strokeStyle = 'rgba(255,255,255,0.05)';
-    ctx.lineWidth = 1;
-    for(let i=0; i<256; i+=4) {
-      const y = (i + t*50) % 256;
-      ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(256,y); ctx.stroke();
+    // 2. Analog Glitch Scanlines
+    ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+    ctx.lineWidth = 2;
+    for(let i=0; i<256; i+=6) {
+      const y = (i + t*80) % 256;
+      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(256, y); ctx.stroke();
     }
 
-    ctx.lineWidth = 12;
+    // 3. Eye Expressions (High Fidelity)
+    ctx.lineWidth = 14;
     ctx.lineCap   = 'round';
     
-    let eyeColor = COLORS.accent;
-    if (phase === 'ALERT') eyeColor = '#ff0033';
-    if (overHeat) eyeColor = '#ff8800';
-    if (isNight)  eyeColor = '#3a86ff';
-
+    let eyeColor = phase === 'ALERT' ? '#ffffff' : (isOverheating ? '#ffffff' : COLORS.accent);
     ctx.strokeStyle = eyeColor;
-    ctx.shadowBlur  = 15;
+    ctx.shadowBlur  = 20;
     ctx.shadowColor = eyeColor;
 
-    if (isNight) {
-      ctx.beginPath(); ctx.arc(100, 120, 30, 0, Math.PI); ctx.stroke();
-      ctx.beginPath(); ctx.arc(156, 120, 30, 0, Math.PI); ctx.stroke();
-    } else if (phase === 'ALERT') {
-      ctx.beginPath(); ctx.moveTo(70, 100); ctx.lineTo(110, 140); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(186, 100); ctx.lineTo(146, 140); ctx.stroke();
+    if (phase === 'ALERT') {
+      // GIANT HAZARD X EYES
+      ctx.beginPath(); ctx.moveTo(60, 80); ctx.lineTo(110, 140); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(110, 80); ctx.lineTo(60, 140); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(146, 80); ctx.lineTo(196, 140); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(196, 80); ctx.lineTo(146, 140); ctx.stroke();
+    } else if (isNightVal) {
+      // SINGLE LINE SLEEPING EYES
+      ctx.beginPath(); ctx.moveTo(60, 128); ctx.lineTo(110, 128); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(146, 128); ctx.lineTo(196, 128); ctx.stroke();
     } else if (phase === 'ENGAGED') {
+      // LARGE SOCIAL DOTS
       ctx.beginPath(); ctx.arc(100, 128, 15, 0, Math.PI*2); ctx.stroke();
       ctx.beginPath(); ctx.arc(156, 128, 15, 0, Math.PI*2); ctx.stroke();
     } else {
+      // IDLE SLITS
       ctx.beginPath(); ctx.moveTo(80, 128); ctx.lineTo(120, 128); ctx.stroke();
       ctx.beginPath(); ctx.moveTo(136, 128); ctx.lineTo(176, 128); ctx.stroke();
     }
@@ -311,12 +324,14 @@ export default function ExperienceEngine({ onBack }: ExperienceEngineProps) {
 
         chassisParts.current.forEach((mesh, id) => {
           if (mesh.material.emissive) {
-            if (alertFlash) mesh.material.emissive.set(COLORS.alert);
+            if (alertFlash) mesh.material.emissive.set('#ff0000');
             else if (id === 'core' && phase === 'ENGAGED') mesh.material.emissive.set(COLORS.accent);
+            else if (sim.temp > 30) mesh.material.emissive.set('#ff6600');
             else mesh.material.emissiveIntensity = (id.startsWith('bat') ? 0.4 : 0.1) + Math.abs(Math.sin(t*3)) * 0.2;
           }
         });
 
+        // 3. Actuator VFX: Sound Wave Rings
         soundRings.current.forEach((ring, i) => {
           if (phase === 'ALERT' || phase === 'ENGAGED') {
             const cycle = (t * 2 + i * 0.3) % 1;
@@ -328,54 +343,49 @@ export default function ExperienceEngine({ onBack }: ExperienceEngineProps) {
           }
         });
 
-        if (isTilted) {
-          rootGroup.current.rotation.z = Math.min(0.8, rootGroup.current.rotation.z + 0.05); 
+        // 4. MPU6050 Mapping
+        if (tiltRef.current) {
+          rootGroup.current.rotation.z = Math.min(0.8, rootGroup.current.rotation.z + 0.1); 
           rootGroup.current.position.y = -0.15;
-          rootGroup.current.rotation.x = Math.sin(t * 10) * 0.1;
+          rootGroup.current.rotation.y = Math.sin(t * 20) * 0.05; // Shake while tilted
         } else {
-          rootGroup.current.rotation.z *= 0.9;
-          rootGroup.current.rotation.x *= 0.9;
-          rootGroup.current.position.y *= 0.9;
+          rootGroup.current.rotation.z *= 0.85;
+          rootGroup.current.position.y *= 0.85;
         }
 
-        if (isRelayOn) {
-          rootGroup.current.position.z += Math.sin(t * 60) * 0.02;
-          rootGroup.current.scale.set(1.02, 1.02, 1.02);
+        // 5. Relay Actuator Shake Kick
+        if (relayRef.current) {
+          rootGroup.current.position.x = Math.sin(t * 80) * 0.02; // Violent vibration
+          rootGroup.current.scale.set(1.03, 1.03, 1.03); 
         } else {
           rootGroup.current.scale.set(1, 1, 1);
+          rootGroup.current.position.x *= 0.8;
         }
 
-        const overHeat = simValues.temp > 40;
-        const isNight  = simValues.light < 20;
+        const overHeat = sim.temp > 30;
+        const isNightVal = sim.light < 20;
 
-        if (phase === 'IDLE') {
-          headGroup.current.rotation.y = Math.sin(t * (isNight ? 0.2 : 0.5)) * 0.4;
-          if (isNight) headGroup.current.rotation.x = 0.2;
+        // 6. Servo Logic (DROWSY STOPS SCANNING)
+        if (isNightVal) {
+          // DROWSY: STOP NECK TILTING & DROP HEAD
+          headGroup.current.rotation.y += (0 - headGroup.current.rotation.y) * 0.05;
+          headGroup.current.rotation.x += (0.6 - headGroup.current.rotation.x) * 0.05;
+        } else if (phase === 'ALERT') {
+          headGroup.current.rotation.y = Math.sin(t * 22) * 0.1;
+          smokeParticles.current.forEach(sm => {
+            if (sm.material.opacity <= 0) {
+               sm.position.set(0, 0.8, 0); sm.material.opacity = 1;
+            }
+            sm.position.y += 0.06; sm.material.opacity -= 0.02;
+          });
+        } else if (overHeat) {
+          headGroup.current.rotation.x = Math.sin(t * 50) * 0.05; // Thermal shimmer
         } else if (phase === 'ENGAGED') {
           headGroup.current.rotation.y = Math.sin(t * 1.5) * 0.2;
           headGroup.current.rotation.x = Math.sin(t * 8) * 0.1 - 0.2;
-        } else if (phase === 'ALERT') {
-          headGroup.current.rotation.y = Math.sin(t * 22) * 0.1;
-          smokeParticles.current.forEach((sm, i) => {
-            if (sm.material.opacity <= 0) {
-               sm.position.set(0, 0.8, 0);
-               sm.material.opacity = 0.8;
-               sm.userData.vx = (Math.random()-0.5)*0.05;
-               sm.userData.vy = 0.05 + Math.random()*0.05;
-               sm.userData.vz = (Math.random()-0.5)*0.05;
-            }
-            sm.position.x += sm.userData.vx;
-            sm.position.y += sm.userData.vy;
-            sm.position.z += sm.userData.vz;
-            sm.material.opacity -= 0.015;
-            sm.scale.multiplyScalar(1.02);
-          });
-        } else if (overHeat) {
-          headGroup.current.rotation.x = Math.sin(t * 50) * 0.05;
         } else {
-          headGroup.current.rotation.y *= 0.95;
-          headGroup.current.rotation.x *= 0.95;
-          smokeParticles.current.forEach(sm => { sm.material.opacity *= 0.9; });
+          headGroup.current.rotation.y = Math.sin(t * 0.5) * 0.4;
+          headGroup.current.rotation.x *= 0.9;
         }
       }
     }
@@ -385,13 +395,17 @@ export default function ExperienceEngine({ onBack }: ExperienceEngineProps) {
   };
 
   useEffect(() => {
+    simRef.current = simValues;
+    relayRef.current = isRelayOn;
+    tiltRef.current = isTilted;
+    
     const nextPhase = getPhase();
     if (nextPhase !== phase) {
       setPhase(nextPhase);
       addLog(`PHASE SHIFT → ${nextPhase}`);
       musicEngine.playSfx(nextPhase === 'ALERT' ? 1000 : 700);
     }
-  }, [simValues, phase]);
+  }, [simValues, phase, isRelayOn, isTilted]);
 
   useEffect(() => { loadThree(setupScene); return () => { mountedRef.current = false; if(animRef.current) cancelAnimationFrame(animRef.current); }; }, []);
 
