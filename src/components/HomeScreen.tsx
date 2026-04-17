@@ -136,10 +136,10 @@ export default function HomeScreen({ onNavigate }: HomeScreenProps) {
           {/* 3-engine grid - Enlarged and more prominent */}
           <div style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(3, 1fr)',
-            gap: '30px',
-            padding: '20px',
-            maxWidth: '1200px',
+            gridTemplateColumns: 'repeat(4, 1fr)',
+            gap: '20px',
+            padding: '10px',
+            maxWidth: '1400px',
             margin: '0 auto 40px',
           }}>
             {engines.map((engine, idx) => {
@@ -156,12 +156,12 @@ export default function HomeScreen({ onNavigate }: HomeScreenProps) {
                     background: engine.gradient,
                     border: '5px solid #000',
                     boxShadow: isHovered ? `0 8px 0 ${engine.color}88, 0 12px 40px ${engine.color}66` : engine.shadow,
-                    padding: '35px 24px', borderRadius: '12px',
+                    padding: '25px 18px', borderRadius: '12px',
                     animation: `fadeIn 0.6s ease ${idx * 0.15}s both`,
                     textAlign: 'left', cursor: 'pointer',
                     transform: isHovered ? 'translateY(-10px) scale(1.04)' : 'none',
                     transition: 'all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)',
-                    position: 'relative', overflow: 'hidden', minHeight: '260px',
+                    position: 'relative', overflow: 'hidden', minHeight: '300px',
                     display: 'flex', flexDirection: 'column', justifyContent: 'space-between'
                   }}
                 >
@@ -289,7 +289,8 @@ export default function HomeScreen({ onNavigate }: HomeScreenProps) {
       <style>{`
         @keyframes float  { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-        @media (max-width: 600px) { div[style*="repeat(3, 1fr)"] { grid-template-columns: 1fr !important; } }
+        @media (max-width: 1000px) { div[style*="repeat(4, 1fr)"] { grid-template-columns: repeat(2, 1fr) !important; } }
+        @media (max-width: 600px) { div[style*="repeat(4, 1fr)"] { grid-template-columns: 1fr !important; } }
       `}</style>
     </div>
   );
