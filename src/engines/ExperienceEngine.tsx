@@ -38,8 +38,9 @@ export default function ExperienceEngine({ onBack }: ExperienceEngineProps) {
 
   // Group references for targeted animations
   const chassisParts   = useRef<Map<string, any>>(new Map());
-  const eyeL           = useRef<any>(null);
-  const eyeR           = useRef<any>(null);
+  const faceCanvas     = useRef<HTMLCanvasElement>(null);
+  const faceTexture    = useRef<any>(null);
+  const soundRings     = useRef<any[]>([]);
 
   const addLog = (msg: string) => {
     setLogs(prev => [msg, ...prev].slice(0, 12));
@@ -50,7 +51,7 @@ export default function ExperienceEngine({ onBack }: ExperienceEngineProps) {
   const loadThree = async (cb: () => void) => {
     if ((window as any).THREE) return cb();
     const s = document.createElement('script');
-    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.min.js';
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/three.js/0.128.0/three.min.js'; // Using 128 for broader compatibility
     s.onload = cb;
     document.head.appendChild(s);
   };
@@ -153,36 +154,48 @@ export default function ExperienceEngine({ onBack }: ExperienceEngineProps) {
     const headSphere = new THREE.Mesh(new THREE.SphereGeometry(0.35, 32, 24), new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.2 }));
     head.add(headSphere);
 
-    // Screen Group
+    // Screen Group with Canvas Face
     const screenGroup = new THREE.Group();
     screenGroup.position.set(0, 0, 0.28);
     head.add(screenGroup);
 
     const faceGeom = new THREE.CircleGeometry(0.28, 32);
-    const faceMat = new THREE.MeshStandardMaterial({ color: 0x000000 });
+    // Initialize Canvas for face
+    const canvas = document.createElement('canvas');
+    canvas.width = 256; canvas.height = 256;
+    (faceCanvas as any).current = canvas;
+    const texture = new THREE.CanvasTexture(canvas);
+    faceTexture.current = texture;
+
+    const faceMat = new THREE.MeshBasicMaterial({ 
+      map: texture,
+      transparent: true,
+      opacity: 0.9
+    });
     const facePlane = new THREE.Mesh(faceGeom, faceMat);
+    faceMesh.current = facePlane;
     screenGroup.add(facePlane);
 
-    // Procedural Eyes
-    const eyeGeom = new THREE.SphereGeometry(0.04, 16, 16);
-    const eyeMat = new THREE.MeshBasicMaterial({ color: COLORS.accent });
-    
-    const eL = new THREE.Mesh(eyeGeom, eyeMat);
-    eL.position.set(-0.1, 0, 0.02);
-    screenGroup.add(eL);
-    eyeL.current = eL;
-
-    const eR = new THREE.Mesh(eyeGeom, eyeMat);
-    eR.position.set(0.1, 0, 0.02);
-    screenGroup.add(eR);
-    eyeR.current = eR;
+    // Actuator VFX: Sound Waves (Buzzer)
+    const ringGroup = new THREE.Group();
+    root.add(ringGroup);
+    for (let i = 0; i < 3; i++) {
+      const r = new THREE.Mesh(
+        new THREE.RingGeometry(0.1, 0.12, 32),
+        new THREE.MeshBasicMaterial({ color: COLORS.warning, transparent: true, opacity: 0 })
+      );
+      r.rotation.x = -Math.PI/2;
+      r.position.y = 0.5;
+      ringGroup.add(r);
+      soundRings.current.push(r);
+    }
 
     // Screen Glass Cover
     const glass = new THREE.Mesh(
       new THREE.CircleGeometry(0.3, 32),
       new THREE.MeshStandardMaterial({ color: 0x000000, metalness: 1.0, roughness: 0.1, transparent: true, opacity: 0.4 })
     );
-    glass.position.set(0, 0, 0.31);
+    glass.position.set(0, 0, 0.3);
     head.add(glass);
 
     const visor = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.1, 0.15), new THREE.MeshStandardMaterial({ color: 0x444444, metalness: 0.8 }));
@@ -219,57 +232,90 @@ export default function ExperienceEngine({ onBack }: ExperienceEngineProps) {
       const targetTilt = phase === 'DROWSY' ? 0.6 : (phase === 'ENGAGED' ? -0.2 : 0);
       headGroup.current.rotation.x += (targetTilt - headGroup.current.rotation.x) * 0.08;
 
-      // 3. Handle Dynamic Expressions & Mappings
-      if (eyeL.current && eyeR.current) {
-        const pulse = Math.abs(Math.sin(t * 3));
-        const alertFlash = phase === 'ALERT' && Math.sin(t * 15) > 0;
+      // 3. Handle Dynamic Expressions (Canvas Logic)
+      if (faceCanvas.current && faceTexture.current) {
+        const ctx = faceCanvas.current.getContext('2d');
+        if (ctx) {
+          ctx.clearRect(0, 0, 256, 256);
+          ctx.fillStyle = '#000';
+          ctx.beginPath(); ctx.arc(128, 128, 120, 0, Math.PI * 2); ctx.fill();
 
-        // Eye Expressions Mapping
-        if (phase === 'ALERT') {
-          // X Eyes for Fire/Alert
-          eyeL.current.scale.y = 0.1; eyeL.current.rotation.z = Math.PI/4;
-          eyeR.current.scale.y = 0.1; eyeR.current.rotation.z = -Math.PI/4;
-          eyeL.current.material.color.set(COLORS.alert);
-          eyeR.current.material.color.set(COLORS.alert);
-        } else if (phase === 'DROWSY') {
-          // Half-closed eyelids for sleep
-          eyeL.current.scale.y = 0.2; eyeL.current.rotation.z = 0;
-          eyeR.current.scale.y = 0.2; eyeR.current.rotation.z = 0;
-          eyeL.current.material.color.set(COLORS.info);
-          eyeR.current.material.color.set(COLORS.info);
-        } else {
-          // Normal round eyes
-          eyeL.current.scale.y = 1; eyeL.current.rotation.z = 0;
-          eyeR.current.scale.y = 1; eyeR.current.rotation.z = 0;
-          eyeL.current.material.color.set(COLORS.accent);
-          eyeR.current.material.color.set(COLORS.accent);
+          // Scanlines effect
+          ctx.strokeStyle = 'rgba(0,212,255,0.05)';
+          for(let i=0; i<256; i+=4) { ctx.beginPath(); ctx.moveTo(0,i); ctx.lineTo(256,i); ctx.stroke(); }
+
+          const color = phase === 'ALERT' ? COLORS.alert : (phase === 'DROWSY' ? COLORS.info : COLORS.accent);
+          ctx.fillStyle = color;
+          ctx.shadowBlur = 15; ctx.shadowColor = color;
+
+          const blink = Math.sin(t * 4) > 0.95 && phase === 'IDLE';
+          
+          if (phase === 'ALERT') {
+            // X_X Face
+            ctx.lineWidth = 12; ctx.strokeStyle = color;
+            ctx.beginPath(); ctx.moveTo(60, 80); ctx.lineTo(100, 140); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(100, 80); ctx.lineTo(60, 140); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(156, 80); ctx.lineTo(196, 140); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(196, 80); ctx.lineTo(156, 140); ctx.stroke();
+          } else if (phase === 'DROWSY') {
+            // Sleepy Slits
+            ctx.fillRect(60, 110, 45, 8); ctx.fillRect(151, 110, 45, 8);
+          } else if (phase === 'ENGAGED') {
+            // Happy ^_^
+            ctx.lineWidth = 10; ctx.strokeStyle = color;
+            ctx.beginPath(); ctx.arc(80, 140, 30, Math.PI, 0); ctx.stroke();
+            ctx.beginPath(); ctx.arc(176, 140, 30, Math.PI, 0); ctx.stroke();
+          } else {
+            // Normal Round Eyes
+            if (!blink) {
+              ctx.beginPath(); ctx.arc(80, 128, 25, 0, Math.PI * 2); ctx.fill();
+              ctx.beginPath(); ctx.arc(176, 128, 25, 0, Math.PI * 2); ctx.fill();
+            }
+          }
+          faceTexture.current.needsUpdate = true;
         }
+
+        const alertFlash = phase === 'ALERT' && Math.sin(t * 15) > 0;
 
         // Global Thermal Glow (Chassis Reactions)
         chassisParts.current.forEach((mesh, id) => {
           if (mesh.material.emissive) {
             if (alertFlash) mesh.material.emissive.set(COLORS.alert);
             else if (id === 'core' && phase === 'ENGAGED') mesh.material.emissive.set(COLORS.accent);
-            else if (id === 'core' && phase === 'DROWSY') mesh.material.emissive.set(COLORS.info);
-            else mesh.material.emissiveIntensity = (id.startsWith('bat') ? 0.4 : 0.1) + pulse * 0.2;
+            else mesh.material.emissiveIntensity = (id.startsWith('bat') ? 0.4 : 0.1) + Math.abs(Math.sin(t*3)) * 0.2;
           }
         });
 
-        // Physical Tilt Mapping (MPU6050 Shake)
+        // 4. Actuator VFX: Sound Waves
+        soundRings.current.forEach((ring, i) => {
+          if (phase === 'ALERT' || phase === 'ENGAGED') {
+            const cycle = (t * 2 + i * 0.3) % 1;
+            ring.scale.set(1 + cycle * 4, 1 + cycle * 4, 1);
+            ring.material.opacity = (1 - cycle) * 0.8;
+            ring.visible = true;
+          } else {
+            ring.visible = false;
+          }
+        });
+
+        // 5. Physical Tilt Mapping (Dramatic 35-degree tip)
         if (isTilted) {
-          rootGroup.current.rotation.x = Math.sin(t * 8) * 0.25;
-          rootGroup.current.rotation.z = Math.cos(t * 8) * 0.15;
-          rootGroup.current.position.y = Math.abs(Math.sin(t * 12)) * 0.1; // Bounce
+          rootGroup.current.rotation.z = Math.min(0.6, rootGroup.current.rotation.z + 0.05); // Tip over
+          rootGroup.current.position.y = -0.1;
         } else {
-          rootGroup.current.rotation.x *= 0.9;
           rootGroup.current.rotation.z *= 0.9;
           rootGroup.current.position.y *= 0.9;
         }
 
-        // Alert Jitter
-        if (phase === 'ALERT') {
-          headGroup.current.rotation.y = Math.sin(t * 20) * 0.15;
-          addLog("DANGER: CRITICAL VENTILATION REQUIRED");
+        // 6. Independent Head Scanning
+        if (phase === 'IDLE') {
+          headGroup.current.rotation.y = Math.sin(t * 0.5) * 0.4;
+        } else if (phase === 'ENGAGED') {
+          headGroup.current.rotation.y = Math.sin(t * 1.5) * 0.2; // Tracking
+        } else if (phase === 'ALERT') {
+          headGroup.current.rotation.y = Math.sin(t * 22) * 0.1; // Panic jitter
+        } else {
+          headGroup.current.rotation.y *= 0.95;
         }
       }
     }
@@ -298,8 +344,8 @@ export default function ExperienceEngine({ onBack }: ExperienceEngineProps) {
   const triggerSummon = () => {
     if (isSummoned) return;
     addLog("SUMMON SIGNAL SENT → N20 PWM CONTROL");
-    currentZ.current = -12; // Far away
-    targetZ.current = 0;    // Move to near
+    currentZ.current = -18; // Start truly far away
+    targetZ.current = 0;
     setSimValues(v => ({ ...v, distance: 30 }));
     setIsSummoned(true);
     musicEngine.playSfx(200);
@@ -331,6 +377,7 @@ export default function ExperienceEngine({ onBack }: ExperienceEngineProps) {
     setIsClimateStressed(active);
     setSimValues(v => ({ ...v, temp: active ? 34.5 : 26.5, humidity: active ? 85 : 45 }));
     addLog(active ? "ENVIRONMENTAL STRESS → BME280 THRESHOLD" : "CLIMATE STABILIZED");
+    if (active) musicEngine.playSfx(500);
   };
 
   return (
@@ -477,6 +524,27 @@ export default function ExperienceEngine({ onBack }: ExperienceEngineProps) {
           </div>
         </div>
       )}
+      {/* Fire Alarm Overlay (Real-world reaction) */}
+      {phase === 'ALERT' && (
+        <div style={{ position:'fixed', inset:0, zIndex:200, pointerEvents:'none', background:'radial-gradient(circle, transparent 40%, rgba(255,0,110,0.3) 100%)', animation:'heartbeat 0.5s infinite' }} />
+      )}
+
+      {/* Floating Method Indicator */}
+      {(isTilted || isClimateStressed || isGasActive || isSummoned) && (
+        <div style={{ position:'fixed', bottom:200, left:'50%', transform:'translateX(-50%)', zIndex:160, background:'rgba(0,10,20,0.92)', border:'1px solid #06FFA5', padding:'10px 20px', borderRadius:4, textAlign:'center' }}>
+          <div style={{ fontFamily:"'Press Start 2P',cursive", fontSize:'0.45rem', color:'#06FFA5', marginBottom:4 }}>DEMO MODE ACTIVE</div>
+          <div style={{ fontSize:'0.6rem', color:'white' }}>
+            {isTilted && "METHOD: MPU6050 TILT TEST → CHASSIS PITCH"}
+            {isClimateStressed && "METHOD: BME280 CLIMATE → 5V RELAY TRIPPED"}
+            {isGasActive && "METHOD: MQ-2 GAS TEST → GC9A01 ALARM FACE"}
+            {isSummoned && "METHOD: HC-SR04 SONAR → N20 TRACTION"}
+          </div>
+        </div>
+      )}
+
+      <style>{`
+        @keyframes heartbeat { 0%{opacity:0.2;} 50%{opacity:0.6;} 100%{opacity:0.2;} }
+      `}</style>
     </div>
   );
 }
